@@ -312,11 +312,12 @@ function togglePageMute() {
 
 const isConnected = computed(() => status.value === 'connected')
 const showConnecting = computed(() =>
-  !error.value && ['connecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(status.value)
+  !error.value && ['connecting', 'reconnecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(status.value)
 )
 const showError = computed(() => !!error.value || status.value === 'error' || status.value === 'disconnected')
 const statusText = computed(() => {
   switch (status.value) {
+    case 'reconnecting': return '连接中断，正在重新连接...'
     case 'signaling': return '信令通道已建立，协商连接参数...'
     case 'waiting_offer': return '等待设备推流...'
     case 'connecting_webrtc': return '正在建立 P2P 视频通道...'

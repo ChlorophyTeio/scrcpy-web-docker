@@ -24,6 +24,12 @@ export function useWebRTC(deviceId, options = {}) {
 
   let webrtcObj = null
   let ws = null
+  let reconnectTimer = null
+  let reconnectAttempt = 0
+  let reconnectEnabled = false
+  let reconnectShareToken = null
+  let reconnectSharePassword = ''
+  let connectionGeneration = 0
   let pc = null
   let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }]
   let inputChannel = null
@@ -75,6 +81,17 @@ export function useWebRTC(deviceId, options = {}) {
   }
 
   async function connect(shareTokenParam = null, sharePwdParam = '') {
+    reconnectEnabled = true
+    reconnectAttempt = 0
+    reconnectShareToken = shareTokenParam
+    reconnectSharePassword = sharePwdParam
+    const generation = ++connectionGeneration
+    clearReconnectTimer()
+    cleanupConnection()
+    await openConnection(shareTokenParam, sharePwdParam, false, generation)
+  }
+
+  async function openConnection(shareTokenParam, sharePwdParam, reconnecting, generation) {
     status.value = 'connecting'
     signalingReady.value = false
     error.value = null
@@ -96,9 +113,15 @@ export function useWebRTC(deviceId, options = {}) {
     try {
       ticket = await issueWebSocketTicket(shareTokenParam || '', sharePwdParam)
     } catch (err) {
+      if (reconnecting && reconnectEnabled) {
+        error.value = err.message
+        scheduleReconnect()
+        return
+      }
       failConnection(err.message)
       return
     }
+    if (!reconnectEnabled || generation !== connectionGeneration) return
     const wsUrl = `${wsProtocol}//${location.host}/connect_client?ticket=${encodeURIComponent(ticket)}`
     
     debugLog('[Signaling] Connecting to signaling service')
@@ -109,6 +132,8 @@ export function useWebRTC(deviceId, options = {}) {
     ws.onopen = () => {
       if (ws !== signalingSocket) return
       debugLog('[Signaling] WebSocket connected')
+      reconnectAttempt = 0
+      error.value = null
       status.value = 'signaling'
       ws.send(JSON.stringify({
         message_type: 'connect',
@@ -151,8 +176,29 @@ export function useWebRTC(deviceId, options = {}) {
     ws.onclose = () => {
       if (ws !== signalingSocket) return
       debugLog('[Signaling] WebSocket closed')
-      disconnect()
+      ws = null
+      cleanupConnection()
+      if (reconnectEnabled) scheduleReconnect()
     }
+  }
+
+  function clearReconnectTimer() {
+    if (!reconnectTimer) return
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+
+  function scheduleReconnect() {
+    if (!reconnectEnabled || reconnectTimer) return
+    const generation = connectionGeneration
+    const delay = Math.min(1000 * (2 ** Math.min(reconnectAttempt, 4)), 15000)
+    reconnectAttempt += 1
+    status.value = 'reconnecting'
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      if (!reconnectEnabled || generation !== connectionGeneration) return
+      void openConnection(reconnectShareToken, reconnectSharePassword, true, generation)
+    }, delay)
   }
 
   function handleMessage(msg) {
@@ -1386,7 +1432,7 @@ async function handleDeviceMessage(payload) {
     debugLog('[WebRTC] Camera streaming stopped and tracks released')
   }
 
-  function disconnect() {
+  function cleanupConnection() {
     pendingCandidates = []
     signalingReady.value = false
     for (const session of terminalSessions.values()) session.close()
@@ -1408,8 +1454,9 @@ async function handleDeviceMessage(payload) {
     videoStream = null
     cleanupAudioPlayback()
     if (ws) {
-      ws.close()
+      const socket = ws
       ws = null
+      socket.close()
     }
     if (fileChannel) {
       try { fileChannel.close() } catch(e) {}
@@ -1425,6 +1472,13 @@ async function handleDeviceMessage(payload) {
       webrtcObj._adbRawConnection = null
       webrtcObj._adbActiveSocketsCount = 0
     }
+  }
+
+  function disconnect() {
+    reconnectEnabled = false
+    connectionGeneration += 1
+    clearReconnectTimer()
+    cleanupConnection()
   }
 
   onUnmounted(() => {

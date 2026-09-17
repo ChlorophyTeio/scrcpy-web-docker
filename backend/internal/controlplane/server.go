@@ -17,6 +17,7 @@ import (
 
 	"github.com/cwithw/ScrcpyCat/backend/internal/webui"
 	"github.com/cwithw/ScrcpyCat/internal/buildinfo"
+	"github.com/cwithw/ScrcpyCat/internal/wskeepalive"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,6 +31,7 @@ type Server struct {
 	deviceMetrics          sync.Map
 	pendingAgentHandshakes chan struct{}
 	loginLimiter           *loginLimiter
+	socketKeepalive        wskeepalive.Options
 }
 
 func NewServer(config Config) (*Server, error) {
@@ -63,6 +65,7 @@ func newServer(config Config, store Store, requireRedis bool) (*Server, error) {
 		},
 		pendingAgentHandshakes: make(chan struct{}, config.MaxPendingAgentHandshakes),
 		loginLimiter:           newLoginLimiter(config),
+		socketKeepalive:        wskeepalive.DefaultOptions,
 	}
 	server.hub.filter = server.filterBroadcast
 	if requireRedis {
@@ -446,6 +449,8 @@ func (s *Server) connectClient(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	stopKeepalive := wskeepalive.Start(conn, s.socketKeepalive)
+	defer stopKeepalive()
 	audioDone := make(chan struct{})
 	defer close(audioDone)
 	peer := &browserPeer{id: randomID(), user: user, accessToken: access.accessToken, viewOnly: viewOnly, socket: &socketPeer{conn: conn}, audioFrames: make(chan []byte, 5), audioDone: audioDone}
@@ -636,6 +641,8 @@ func (s *Server) registerAgent(w http.ResponseWriter, r *http.Request) {
 	conn.SetReadLimit(1 << 62)
 	<-s.pendingAgentHandshakes
 	reserved = false
+	stopKeepalive := wskeepalive.Start(conn, s.socketKeepalive)
+	defer stopKeepalive()
 	device := s.store.UpsertAgentDevice(hello.DeviceID, hello.DeviceInfo)
 	previous := s.hub.setAgent(hello.DeviceID, peer)
 	if previous != nil && previous != peer {

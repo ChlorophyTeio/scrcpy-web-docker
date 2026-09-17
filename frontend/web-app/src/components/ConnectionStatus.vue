@@ -27,6 +27,7 @@ const statusText = computed(() => {
   const map = {
     'disconnected': '已断开',
     'connecting': '连接中',
+    'reconnecting': '重新连接',
     'signaling': '信令连接',
     'waiting_offer': '等待响应',
     'connecting_webrtc': '建立连接',

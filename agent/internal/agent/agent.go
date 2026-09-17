@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cwithw/ScrcpyCat/internal/wskeepalive"
 	"github.com/gorilla/websocket"
 )
 
@@ -147,6 +148,8 @@ func (c *client) connect(ctx context.Context) error {
 		return err
 	}
 	defer conn.Close()
+	stopKeepalive := wskeepalive.Start(conn, wskeepalive.DefaultOptions)
+	defer stopKeepalive()
 	stopOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stopOnCancel()
 	defer c.bridge.Stop()
@@ -197,7 +200,10 @@ func (c *client) connect(ctx context.Context) error {
 			case <-stopHeartbeat:
 				return
 			case <-ticker.C:
-				_ = writer.writeJSON(map[string]any{"message_type": "heartbeat", "device_id": c.config.DeviceID})
+				if err := writer.writeJSON(map[string]any{"message_type": "heartbeat", "device_id": c.config.DeviceID}); err != nil {
+					_ = conn.Close()
+					return
+				}
 			}
 		}
 	}()

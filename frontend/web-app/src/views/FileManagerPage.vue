@@ -209,7 +209,7 @@ const installSessions = {}
 const downloadQueue = []
 const installQueue = []
 
-const isConnecting = computed(() => ['connecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(webrtcStatus.value))
+const isConnecting = computed(() => ['connecting', 'reconnecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(webrtcStatus.value))
 
 const connectionText = computed(() => {
   if (!selectedDeviceId.value) return '未连接'

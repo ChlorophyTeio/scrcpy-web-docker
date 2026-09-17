@@ -160,7 +160,7 @@
         <div v-if="showOverlay" class="panel-overlay">
           <div class="overlay-box">
             <div v-if="connMetaText" class="conn-meta">{{ connMetaText }}</div>
-            <template v-if="['connecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(currentWebRTC.status.value)">
+            <template v-if="['connecting', 'reconnecting', 'signaling', 'waiting_offer', 'connecting_webrtc'].includes(currentWebRTC.status.value)">
               <div class="mini-spinner"></div>
               <p>{{ loadingText }}</p>
             </template>
@@ -1872,6 +1872,7 @@ const statusText = computed(() => {
   const map = {
     'connected': '已连接',
     'connecting': '连接中',
+    'reconnecting': '重连中',
     'signaling': '信令中',
     'disconnected': '断开',
     'error': '错误'
@@ -1880,6 +1881,7 @@ const statusText = computed(() => {
 })
 
 const loadingText = computed(() => {
+  if (currentWebRTC.value.status.value === 'reconnecting') return '连接中断，正在重连...'
   if (currentWebRTC.value.status.value === 'waiting_offer') return '等待设备...'
   return '建立连接...'
 })

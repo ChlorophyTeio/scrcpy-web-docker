@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cwithw/ScrcpyCat/internal/wskeepalive"
 	"github.com/gorilla/websocket"
 )
 
@@ -92,6 +93,50 @@ func TestAgentAndBrowserForwarding(t *testing.T) {
 	if forwarded["message_type"] != "forward" || forwarded["client_id"] == "" {
 		t.Fatalf("unexpected forwarded message: %#v", forwarded)
 	}
+}
+
+func TestAgentWithoutPongIsMarkedOffline(t *testing.T) {
+	server := newTestServer(t)
+	server.socketKeepalive = wskeepalive.Options{
+		PingInterval: 10 * time.Millisecond,
+		PongTimeout:  40 * time.Millisecond,
+		WriteTimeout: 10 * time.Millisecond,
+	}
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+	base := "ws" + strings.TrimPrefix(testServer.URL, "http")
+
+	enrollment := server.store.CreateEnrollment("silent-device", time.Minute)
+	agent, _, err := websocket.DefaultDialer.Dial(base+"/register_agent", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer agent.Close()
+	if err := agent.WriteJSON(map[string]any{
+		"message_type":     "agent_hello",
+		"device_id":        "silent-device",
+		"enrollment_token": enrollment.Token,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err := agent.ReadJSON(&config); err != nil {
+		t.Fatal(err)
+	}
+	if device, err := server.store.Device("silent-device"); err != nil || !device.Online {
+		t.Fatalf("device was not registered online: device=%+v err=%v", device, err)
+	}
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		device, err := server.store.Device("silent-device")
+		if err == nil && !device.Online {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	device, _ := server.store.Device("silent-device")
+	t.Fatalf("silent device remained online: %+v", device)
 }
 
 func TestFileGatewayAndTrustedSessionPermissions(t *testing.T) {
