@@ -27,7 +27,9 @@ jobs:
         working-directory: plugins/maa/worker
       - run: python3 tools/check-release.py
       - run: bash -n docker/*.sh plugins/maa/docker/start.sh plugins/maa/docker/maa-phone-display
-      - run: docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml --profile database --profile maa config --quiet
+      - run: python3 -m unittest discover -s tools -p 'test_*.py'
+      - run: docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml config --quiet
+      - run: COMPOSE_PROFILES= docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml config --quiet
       - name: Check host architecture compilation
         run: |
           for arch in amd64 arm64; do

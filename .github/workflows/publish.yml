@@ -24,6 +24,8 @@ jobs:
             suffix: ''
           - dockerfile: plugins/maa/Dockerfile
             suffix: '-maa'
+          - dockerfile: cache/Dockerfile
+            suffix: '-cache'
     steps:
       - uses: actions/checkout@v4
         with:

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Container version="2">
+  <Name>scrcpycat-cache</Name>
+  <Repository>chlorophyimo/scrcpycat-cache:latest</Repository>
+  <Registry>https://hub.docker.com/r/chlorophyimo/scrcpycat-cache</Registry>
+  <Network>scrcpycat</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/ChlorophyTeio/scrcpy-web-docker/issues</Support>
+  <Project>https://github.com/ChlorophyTeio/scrcpy-web-docker</Project>
+  <Category>Tools:</Category>
+  <Icon>https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/cache/icon.svg</Icon>
+  <WebUI />
+  <Overview>ScrcpyCat 内部消息总线，Redis 7.4.12，启用 AOF 持久化和健康检查。与主容器使用同一自定义网络，不映射宿主机端口。</Overview>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <Config Name="缓存持久化" Target="/data" Default="/mnt/user/appdata/scrcpycat-cache" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/mnt/user/appdata/scrcpycat-cache</Config>
+</Container>

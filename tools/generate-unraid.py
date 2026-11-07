@@ -2,8 +2,8 @@
 """Generate shareable Unraid templates, never by inspecting a live container."""
 import argparse,re,xml.etree.ElementTree as E
 from pathlib import Path
-p=argparse.ArgumentParser();p.add_argument('--owner',default='ChlorophyTeio');p.add_argument('--repo',default='scrcpy-web-docker');p.add_argument('--image',default='chlorophyimo/scrcpycat');p.add_argument('--maa-image',default='chlorophyimo/scrcpycat-maa');p.add_argument('--output',default='unraid');a=p.parse_args()
-if not all(re.fullmatch(r'[A-Za-z0-9_./-]+',v) for v in (a.owner,a.repo,a.image,a.maa_image)):raise SystemExit('Invalid publication identifier')
+p=argparse.ArgumentParser();p.add_argument('--owner',default='ChlorophyTeio');p.add_argument('--repo',default='scrcpy-web-docker');p.add_argument('--image',default='chlorophyimo/scrcpycat');p.add_argument('--maa-image',default='chlorophyimo/scrcpycat-maa');p.add_argument('--cache-image',default='chlorophyimo/scrcpycat-cache');p.add_argument('--output',default='unraid');a=p.parse_args()
+if not all(re.fullmatch(r'[A-Za-z0-9_./-]+',v) for v in (a.owner,a.repo,a.image,a.maa_image,a.cache_image)):raise SystemExit('Invalid publication identifier')
 base=f'https://github.com/{a.owner}/{a.repo}';raw=f'https://raw.githubusercontent.com/{a.owner}/{a.repo}/main';out=Path(a.output);out.mkdir(parents=True,exist_ok=True)
 def config(r,name,target,kind,default='',mode='',required=True,secret=False,description=''):
  E.SubElement(r,'Config',Name=name,Target=target,Default=default,Mode=mode,Type=kind,Display='always',Required=str(required).lower(),Mask=str(secret).lower(),Description=description).text=default
@@ -21,4 +21,10 @@ for maa in (False,True):
   for name,default,secret,description in [('SCRCPYCAT_PUBLIC_URL','',False,'完整网页访问地址，例如 https://主机地址:9015'),('SCRCPYCAT_WEBRTC_HOST_IPS','',False,'Unraid 的局域网 IP，逗号分隔多个地址。'),('SCRCPYCAT_POSTGRES_DSN','',True,'现有 PostgreSQL 17 的专用数据库连接。'),('SCRCPYCAT_REDIS_URL','',False,'同网络 Redis 地址。'),('SCRCPYCAT_ADMIN_USERNAME','admin',False,''),('SCRCPYCAT_ADMIN_PASSWORD','',True,'首次管理员密码，自行填写。'),('SCRCPYCAT_JWT_SECRET','',True,'自行生成并持久保留的随机长字符串。')]:config(r,name,name,'Variable',default,secret=secret,description=description)
   config(r,'插件服务地址','SCRCPYCAT_MAA_URL','Variable','http://maa-web:8080',required=False)
  E.indent(r);E.ElementTree(r).write(out/('my-'+('maa-plugin' if maa else 'scrcpycat')+'.xml'),encoding='utf-8',xml_declaration=True)
+
+r=E.Element('Container',version='2')
+cache_image=a.cache_image
+for k,v in {'Name':'scrcpycat-cache','Repository':cache_image+':latest','Registry':'https://hub.docker.com/r/'+cache_image,'Network':'scrcpycat','Shell':'sh','Privileged':'false','Support':base+'/issues','Project':base,'Category':'Tools:','Icon':raw+'/cache/icon.svg','WebUI':'','Overview':'ScrcpyCat 内部消息总线，Redis 7.4.12，启用 AOF 持久化和健康检查。与主容器使用同一自定义网络，不映射宿主机端口。','ExtraParams':'--restart=unless-stopped'}.items():E.SubElement(r,k).text=v
+config(r,'缓存持久化','/data','Path','/mnt/user/appdata/scrcpycat-cache','rw')
+E.indent(r);E.ElementTree(r).write(out/'my-scrcpycat-cache.xml',encoding='utf-8',xml_declaration=True)
 print('Generated generic templates in',out)

@@ -1,12 +1,7 @@
 name: scrcpycat
 services:
   scrcpy-web:
-    image: ${SCRCPYCAT_IMAGE:-chlorophyimo/scrcpycat:0.1.0}
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      args:
-        VERSION: ${SCRCPYCAT_VERSION:-0.1.0}
+    image: ${SCRCPYCAT_IMAGE:-chlorophyimo/scrcpycat:0.1.1}
     restart: unless-stopped
     environment:
       SCRCPYCAT_PUBLIC_URL: ${SCRCPYCAT_PUBLIC_URL:-https://localhost:9015}
@@ -14,7 +9,8 @@ services:
       SCRCPYCAT_ADMIN_PASSWORD: ${SCRCPYCAT_ADMIN_PASSWORD:?Run tools/init-env.py}
       SCRCPYCAT_JWT_SECRET: ${SCRCPYCAT_JWT_SECRET:?Run tools/init-env.py}
       SCRCPYCAT_POSTGRES_DSN: ${SCRCPYCAT_POSTGRES_DSN:?Configure PostgreSQL}
-      SCRCPYCAT_REDIS_URL: redis://redis:6379/0
+      SCRCPYCAT_REDIS_URL: redis://scrcpycat-cache:6379/0
+      SCRCPYCAT_MAA_URL: http://maa-web:8080
       SCRCPYCAT_TURN_URLS: ${SCRCPYCAT_TURN_URLS:-stun:stun.cloudflare.com:3478}
       SCRCPYCAT_TURN_USERNAME: ${SCRCPYCAT_TURN_USERNAME:-}
       SCRCPYCAT_TURN_CREDENTIAL: ${SCRCPYCAT_TURN_CREDENTIAL:-}
@@ -30,7 +26,11 @@ services:
     device_cgroup_rules:
       - 'c 189:* rwm'
     depends_on:
-      - redis
+      scrcpycat-cache:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+        required: false
     stop_grace_period: 30s
   postgres:
     image: postgres:17-alpine
@@ -47,18 +47,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-  redis:
-    image: redis:7-alpine
+  scrcpycat-cache:
+    image: ${SCRCPYCAT_CACHE_IMAGE:-chlorophyimo/scrcpycat-cache:0.1.1}
     restart: unless-stopped
-    command: [redis-server, --appendonly, 'yes']
     volumes:
       - redis-data:/data
+    networks:
+      default:
+        aliases: [redis]
   maa-web:
-    image: ${SCRCPYCAT_MAA_IMAGE:-chlorophyimo/scrcpycat-maa:0.1.0}
-    profiles: [maa]
-    build:
-      context: ..
-      dockerfile: plugins/maa/Dockerfile
+    image: ${SCRCPYCAT_MAA_IMAGE:-chlorophyimo/scrcpycat-maa:0.1.1}
     restart: unless-stopped
     environment:
       MAA_DEVICE: ${MAA_DEVICE:-}
@@ -67,7 +65,14 @@ services:
       - maa-config:/app/config
       - maa-data:/root/.local/share/maa
       - maa-cache:/root/.cache/maa
+    depends_on:
+      scrcpy-web:
+        condition: service_healthy
     stop_grace_period: 40s
+networks:
+  default:
+    name: ${SCRCPYCAT_NETWORK:-scrcpycat}
+    external: ${SCRCPYCAT_EXTERNAL_NETWORK:-false}
 volumes:
   appdata:
   postgres-data:

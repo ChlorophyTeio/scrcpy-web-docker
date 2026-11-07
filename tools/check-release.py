@@ -18,7 +18,7 @@ for file in (root/'unraid').glob('*.xml'):
  r=E.parse(file).getroot()
  for c in r.findall('Config'):
   if c.attrib.get('Mask')=='true' and ((c.text or '').strip() or c.attrib.get('Default','').strip()):problems.append(str(file.relative_to(root))+': nonempty secret default')
-for required in ('Dockerfile','plugins/maa/Dockerfile','plugins/maa/plugin.json','docs/PLUGINS.md','docs/RELEASING.md','unraid/my-scrcpycat.xml','unraid/my-maa-plugin.xml'):
+for required in ('Dockerfile','plugins/maa/Dockerfile','plugins/maa/plugin.json','cache/Dockerfile','cache/redis.conf','cache/licenses/REDIS-LICENSE.txt','deploy/docker-compose.yml','docs/PLUGINS.md','docs/RELEASING.md','docs/STACK.md','unraid/my-scrcpycat.xml','unraid/my-maa-plugin.xml','unraid/my-scrcpycat-cache.xml'):
  if not (root/required).is_file():problems.append(required+': missing')
 if problems:
  print('\n'.join(problems));sys.exit(1)

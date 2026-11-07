@@ -2,13 +2,28 @@
 
 Android 手机网页远控。主容器整合 Web 控制台、USB ADB 和 Linux agent；MAA 独立运行，服务就绪后才出现入口。停止 MAA 不影响远控。基于 [CwithW/ScrcpyCat](https://github.com/CwithW/ScrcpyCat) 修改，保留原许可和第三方声明。
 
+## 界面预览
+
+实际网页界面；设备信息替换为演示数据，投屏内容已隐藏，MAA 展示参数与日志未执行任务。
+
+![网页远控：设备标题栏、投屏区域与快捷操作](docs/screenshots/remote-desktop.png)
+
+<details>
+<summary>MAA 插件与手机剪贴板</summary>
+
+![MAA：任务、参数、日志和定时入口](docs/screenshots/maa-desktop.png)
+
+<img src="docs/screenshots/clipboard-mobile.png" width="300" alt="手机浏览器中的双向剪贴板面板" />
+
+</details>
+
 ## 组成
 
 | 服务 | 用途 | 必须 |
 | --- | --- | --- |
 | scrcpy-web | 网页、认证、投屏/触控、USB ADB、手机 agent | 是 |
 | PostgreSQL 17 | 用户、设备、策略、审计等持久化数据 | 是，可使用现有实例 |
-| Redis | 消息总线 | 是 |
+| scrcpycat-cache | Redis 消息总线、AOF 持久化和健康检查 | 是 |
 | maa-web | MAA 插件任务执行、定时、核心/资源维护 | 否 |
 
 开始投屏、重连和后台预览均保留实体屏幕原有状态；断开或重建投屏不会自动恢复亮屏。需要唤醒或亮屏时使用网页中的对应按钮。MAA 调整和恢复手机分辨率也沿用此规则。
@@ -19,17 +34,18 @@ USB 调试须在手机上授权。USB 目录整体映射以支持热插拔；若
 
 ## Compose
 
-项目仓库：[ChlorophyTeio/scrcpy-web-docker](https://github.com/ChlorophyTeio/scrcpy-web-docker)。镜像为 `chlorophyimo/scrcpycat` 和可选的 `chlorophyimo/scrcpycat-maa`，首版目标为 `0.1.0`；可用版本请以 Docker Hub 标签和 GitHub Release 为准。
+[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.1**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
+
+源码仓库内启动（Docker Compose 2.20+）：
 
 ```bash
 python3 tools/init-env.py --output deploy/.env --host-ip YOUR_SERVER_LAN_IP --public-url https://YOUR_SERVER_LAN_IP:9015
-# 编辑 deploy/.env，在本机查看生成的初始密码或填写现有数据库。
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile database up -d
-# 可选：填写 MAA_DEVICE，再启用 MAA。
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile database --profile maa up -d
+# 本地打开 deploy/.env 查看生成的初始账号密码。
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml pull
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
 ```
 
-已有 PostgreSQL 时填写专用数据库的 `SCRCPYCAT_POSTGRES_DSN`，不加 `--profile database`。Redis 也可在 Compose 中改为现有实例。不会改动或清理其他数据库。
+默认创建独立 PostgreSQL，并启动 MAA。接现有数据库时用 `--database existing` 生成配置，再填写 DSN 和共享网络。详细说明、独立发布包命令及维护方法见 [Stack 部署](docs/STACK.md)。此发布不更改现有 Unraid 容器或迁移其数据。
 
 访问 `https://服务器地址:9015`。首次生成本机证书；可用 `SCRCPYCAT_TLS_KEY` / `SCRCPYCAT_TLS_CERT` 挂载证书，或设置 `SCRCPYCAT_TLS_ENABLED=false`，由外部反向代理访问内部 HTTP 8443。`SCRCPYCAT_PUBLIC_URL` 应与浏览器入口一致。
 
@@ -48,7 +64,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile dat
 
 先建立共享自定义 bridge 网络，如 `docker network create scrcpycat`。已有网络也可使用，但 Web、MAA、数据库和 Redis 必须能互通。
 
-模板位于 `unraid/`，分别是[主服务](https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/unraid/my-scrcpycat.xml)和[可选 MAA](https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/unraid/my-maa-plugin.xml)。自行填写数据库、Redis、初始密码、JWT 随机字符串、服务器 IP 和网页入口。模板不包含私人账号、密钥、证书或设备数据；MAA 在主网页中操作。
+模板位于 `unraid/`，分别是[主服务](https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/unraid/my-scrcpycat.xml)、[可选 MAA](https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/unraid/my-maa-plugin.xml)和[缓存](https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/unraid/my-scrcpycat-cache.xml)。自行填写数据库、Redis、初始密码、JWT 随机字符串、服务器 IP 和网页入口。模板不包含私人账号、密钥、证书或设备数据；MAA 在主网页中操作。
 
 模板已绑定本项目的镜像和图标。维护者重新生成时使用：
 
@@ -65,6 +81,7 @@ python3 tools/generate-unraid.py
 make build-agent-docker build-scrcpy-server
 docker build -t chlorophyimo/scrcpycat:dev .
 docker build -f plugins/maa/Dockerfile -t chlorophyimo/scrcpycat-maa:dev .
+docker build -f cache/Dockerfile -t chlorophyimo/scrcpycat-cache:dev .
 # 检查
 npm --prefix frontend/web-app ci
 npm --prefix frontend/web-app test
@@ -78,4 +95,4 @@ python3 tools/check-release.py
 
 ## 发布与许可
 
-[发布说明](docs/RELEASING.md)。普通提交仅检查，不上传镜像；发布需手动触发并配置自己的仓库和凭据。原项目、前端及第三方组件的许可分别保留在 `LICENSE`、`frontend/LICENSE`、`NOTICE` 和对应目录。MAA 的许可及源地址见 `plugins/maa/licenses/`。原始项目说明保存在 [上游 README](docs/UPSTREAM_README.md)。
+[发布说明](docs/RELEASING.md)。普通提交仅检查，不上传镜像；发布需手动触发并配置自己的仓库和凭据。原项目、前端及第三方组件的许可分别保留在 `LICENSE`、`frontend/LICENSE`、`NOTICE` 和对应目录。MAA 的许可及源地址见 `plugins/maa/licenses/`；Redis 缓存镜像的许可与来源见 [cache/SOURCE.md](cache/SOURCE.md)。原始项目说明保存在 [上游 README](docs/UPSTREAM_README.md)。
