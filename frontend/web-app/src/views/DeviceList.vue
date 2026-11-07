@@ -1,5 +1,16 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div class="device-list-page">
+    <section class="console-overview" aria-label="设备概览">
+      <div class="console-overview-header"><div><span class="console-eyebrow">ANDROID · 设备管理</span><h2>{{isMobile?'手机控制台':'设备概览'}}</h2><p>查看连接状态，随时打开手机远控。</p></div>
+        <div class="console-overview-actions"><button v-if="authStore.isAdmin" @click="openMAAConsole" title="打开 MAA 任务界面">MAA 任务 ↗</button><button @click="refreshDevices" title="刷新设备状态">刷新设备</button></div>
+      </div>
+      <div class="console-stat-grid">
+        <div class="console-stat"><span class="console-stat-label"><i class="console-stat-dot online"></i>在线设备</span><strong>{{deviceStore.onlineDevices.length}}<small>台</small></strong></div>
+        <div class="console-stat"><span class="console-stat-label"><i class="console-stat-dot offline"></i>离线设备</span><strong>{{deviceStore.offlineDevices.length}}<small>台</small></strong></div>
+        <div class="console-stat"><span class="console-stat-label"><i class="console-stat-dot connected"></i>远控窗口</span><strong>{{deviceStore.activeDeviceIds.length}}<small>个</small></strong></div>
+      </div>
+    </section>
     <!-- 移动端紧凑页头：两行高密度控件 (桌面端已合并至全局顶栏) -->
     <header v-if="isMobile" class="page-header mobile-header">
       <!-- 单行紧凑页头：批量入口（admin）/ 标签 / 排序 / 宫格 / 搜索 / 刷新 / 视图切换 -->
@@ -166,7 +177,7 @@
       </div>
 
       <!-- 搜索展开态：整行搜索输入框 -->
-      <div v-if="showMobileSearch" class="mh-search-row">
+      <div v-if="showMobileSearch || isMobile" class="mh-search-row">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
             <circle cx="11" cy="11" r="7"></circle>
@@ -176,7 +187,7 @@
             ref="mobileSearchInput"
             v-model="searchQuery"
             type="search"
-            placeholder="搜索设备或标签"
+            placeholder="搜索设备、型号或标签"
             @blur="onMobileSearchBlur"
           >
         </div>
@@ -280,7 +291,7 @@
       <main class="grid-container">
         <div v-if="deviceStore.loading && deviceStore.devices.length === 0" class="state-view">
           <div class="spinner"></div>
-          <p>正在获取虚机列表...</p>
+          <p>正在获取设备列表…</p>
         </div>
 
         <div v-else-if="deviceStore.devices.length === 0 && deviceStore.offlineDevices.length === 0" class="state-view">
@@ -492,6 +503,7 @@ const searchQuery = computed({
   set: (v) => { deviceStore.searchQuery = v }
 })
 const showTagDropdown = ref(false)
+function openMAAConsole(){window.dispatchEvent(new CustomEvent('cloudphone-navigate',{detail:'/maa-console'}))}
 const viewMode = computed(() => deviceStore.viewMode)
 
 function toggleViewMode() {

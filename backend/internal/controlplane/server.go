@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package controlplane
 
 import (
@@ -23,12 +24,16 @@ import (
 
 type Server struct {
 	config                 Config
+	plugins                *pluginManager
 	store                  Store
 	hub                    *realtimeHub
 	redis                  *redisBus
 	stopClean              chan struct{}
 	upgrader               websocket.Upgrader
 	deviceMetrics          sync.Map
+	unlockInFlight         sync.Map
+	fileToolsInFlight      sync.Map
+	unlockLastAttempt      sync.Map
 	pendingAgentHandshakes chan struct{}
 	loginLimiter           *loginLimiter
 	socketKeepalive        wskeepalive.Options
@@ -56,6 +61,7 @@ func newServer(config Config, store Store, requireRedis bool) (*Server, error) {
 	config = config.withSecurityDefaults()
 	server := &Server{
 		config:    config,
+		plugins:   newPluginManager(),
 		store:     store,
 		hub:       newRealtimeHub(),
 		stopClean: make(chan struct{}),
@@ -157,6 +163,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/upload", s.requireUser(s.upload))
 	mux.HandleFunc("/downloads/", s.download)
 	mux.HandleFunc("/api/devices/", s.requireUser(s.deviceByID))
+	mux.HandleFunc("/api/plugins", s.requireAdmin(s.pluginsList))
+	mux.HandleFunc("/api/plugins/", s.pluginRequest)
+	mux.HandleFunc("/api/maa/session", s.requireAdmin(s.maaSession))
+	mux.HandleFunc("/maa", s.maaProxy)
+	mux.HandleFunc("/maa/", s.maaProxy)
 	mux.HandleFunc("/api/share/create", s.requireUser(s.shareCreate))
 	mux.HandleFunc("/api/share/list", s.requireUser(s.shareList))
 	mux.HandleFunc("/api/share/revoke", s.requireUser(s.shareRevoke))

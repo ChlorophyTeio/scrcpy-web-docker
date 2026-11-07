@@ -1,3 +1,4 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div 
     class="multi-device-item" 
@@ -18,6 +19,7 @@
       </div>
 
       <div class="header-right" @mousedown.stop @click.stop>
+        <span ref="headerActionTarget" class="header-window-tools"></span>
         <!-- 音频静音开关 -->
         <button 
           class="item-btn audio-btn" 
@@ -40,7 +42,8 @@
         <button 
           class="item-btn close-btn" 
           @click="closeThis"
-          title="关闭此虚机直连"
+          title="关闭此设备连接"
+          aria-label="关闭此设备连接"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -58,17 +61,20 @@
         :is-mini="isMini"
         :is-focused="isFocused"
         :audio-muted="isMuted"
+        :header-target="actionsTarget || headerActionTarget"
+        :ui-session="uiSession"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, reactive, onBeforeUnmount } from 'vue'
 import { useDeviceStore } from '@/stores/devices'
 import DeviceClient from '@/views/DeviceClient.vue'
 
 const props = defineProps({
+  actionsTarget: { default: null },
   deviceId: {
     type: String,
     required: true
@@ -84,6 +90,11 @@ const props = defineProps({
 })
 
 const deviceStore = useDeviceStore()
+const headerActionTarget = ref(null)
+// Retain transient editing state while a transport change remounts DeviceClient.
+// Closing the device destroys this object; clipboard text never goes to storage.
+const uiSession = reactive({ clipboardText: '', clipboardOpen: false, clipboardMode: 'send', clipboardMessage: '', clipboardError: false, mobileMenu: false, webFullscreen: false, disposing: false })
+onBeforeUnmount(() => { uiSession.disposing = true })
 const isFocused = computed(() => 
   deviceStore.activeDeviceIds.length <= 1 || 
   deviceStore.focusedDeviceId === props.deviceId ||
@@ -161,7 +172,8 @@ function closeThis() {
   padding: 6px 10px;
   background: #161b22;
   border-bottom: 1px solid #21262d;
-  height: 36px;
+  min-height: 46px;
+  box-sizing: border-box;
   flex-shrink: 0;
   user-select: none;
   cursor: pointer;
@@ -176,6 +188,8 @@ function closeThis() {
   align-items: center;
   gap: 8px;
   overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .status-dot {
@@ -234,8 +248,8 @@ function closeThis() {
   padding: 4px;
   border-radius: 4px;
   cursor: pointer;
-  height: 24px;
-  min-width: 24px;
+  height: 32px;
+  min-width: 32px;
   transition: all 0.15s ease;
 }
 
@@ -281,5 +295,13 @@ function closeThis() {
   position: relative;
   overflow: hidden;
   background: #000;
+}
+.header-window-tools { display: flex; align-items: center; }
+@media(max-width:600px){
+  .item-header{padding:5px 6px;gap:6px;min-height:48px}
+  .item-btn{height:36px;min-width:32px}
+  .header-left{gap:5px}
+  .device-model-badge{display:none}
+  .header-right{gap:1px}
 }
 </style>

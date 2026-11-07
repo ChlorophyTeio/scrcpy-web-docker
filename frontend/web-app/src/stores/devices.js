@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef, markRaw, watch } from 'vue'
 import { updateRemoteDeviceSettings } from '@/utils/settings'
@@ -321,7 +322,10 @@ export const useDeviceStore = defineStore('devices', () => {
     activeWebRTCMap.value = newMap
   }
 
-  function unregisterWebRTC(deviceId) {
+  function unregisterWebRTC(deviceId, expectedInstance = null) {
+    // A transport switch can register its replacement before the old view's
+    // unmounted hook runs. The old view may only remove its own instance.
+    if (expectedInstance && activeWebRTCMap.value.get(deviceId) !== expectedInstance) return
     if (!deviceId) return
     if (activeWebRTCMap.value.has(deviceId)) {
       const newMap = new Map(activeWebRTCMap.value)
@@ -579,6 +583,7 @@ export const useDeviceStore = defineStore('devices', () => {
         target_device_ids: targetDeviceIds,
         event: event
       }))
+      return true
     } else {
       // 诊断：预览直控/群控事件未下发时给出明确线索（2s 节流）
       const now = Date.now()
@@ -587,6 +592,7 @@ export const useDeviceStore = defineStore('devices', () => {
         console.warn(`[Store] group_control_event 未下发: globalWs ${globalWs ? 'readyState=' + globalWs.readyState : '为 null'}`, targetDeviceIds, event && event.type)
       }
     }
+    return false
   }
 
   function sendInjectData(channel, payload, targetDeviceIds) {

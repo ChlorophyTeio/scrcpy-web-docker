@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -15,18 +16,20 @@ func TestConnectionAndPreviewWakeHaveIndependentLifetimes(t *testing.T) {
 		raw            map[string]any
 		awake, powerOn string
 	}{
-		{"connection default", false, nil, "true", "true"},
+		{"connection default", false, nil, "true", "false"},
 		{"preview default", true, nil, "false", "false"},
-		{"connection disabled", false, map[string]any{"stay_awake": false}, "false", "true"},
-		{"preview enabled", true, map[string]any{"stay_awake": true}, "true", "true"},
-		{"websocket connection", true, map[string]any{"preview": false}, "true", "true"},
+		{"connection disabled", false, map[string]any{"stay_awake": false}, "false", "false"},
+		{"preview enabled", true, map[string]any{"stay_awake": true}, "true", "false"},
+		{"websocket connection", true, map[string]any{"preview": false}, "true", "false"},
+		{"screen-off connection", false, map[string]any{"power_off": true}, "true", "false"},
+		{"camera connection", false, map[string]any{"video_source": "camera"}, "true", "false"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			options, err := parseStreamOptions(tc.raw, tc.preview)
 			if err != nil || options.Values["keep_active"] != tc.awake || options.Values["power_on"] != tc.powerOn {
 				t.Fatal(options, err)
 			}
-			args := strings.Join(captureArguments(Config{ScrcpyVersion: "4.1"}, "test", options, false), " ")
+			args := strings.Join(captureArguments(Config{ScrcpyVersion: "4.1"}, "test", options), " ")
 			if strings.Contains(args, "stay_awake=") || !strings.Contains(args, "keep_active="+tc.awake) || !strings.Contains(args, "cleanup=false") {
 				t.Fatal("wake still depends on cleanup or charging", args)
 			}
@@ -42,7 +45,7 @@ func TestConnectionOptionsPreserveUnlimitedAndDebug(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	args := strings.Join(captureArguments(Config{}, "test", options, false), " ")
+	args := strings.Join(captureArguments(Config{}, "test", options), " ")
 	for _, expected := range []string{"max_fps=0", "max_size=0", "log_level=debug", "capture_orientation=90", "i-frame-interval=2"} {
 		if !strings.Contains(args, expected) {
 			t.Fatal(expected, args)

@@ -1,0 +1,34 @@
+.maa-task-scroll-hint{display:none}
+.main-content{min-width:0;min-height:0}
+.viewport{min-width:0;min-height:0;overscroll-behavior-y:contain}
+.viewport.is-maa-viewport{display:flex;flex-direction:column;overflow:hidden}
+.is-maa-viewport>.maa-desktop{flex:1 1 0;min-height:0;height:auto;width:100%}
+@media(max-width:1024px){
+ html,body,#app{height:100%;min-height:0;overflow:hidden}
+ body{height:var(--app-visible-height,100dvh);min-height:0}
+ .app-container{position:fixed;top:var(--app-visible-top,0px);left:0;width:100%;height:var(--app-visible-height,100dvh);min-height:0;overflow:hidden}
+ .mobile-bottom-nav{height:calc(60px + env(safe-area-inset-bottom,0px));flex:0 0 auto;padding-bottom:env(safe-area-inset-bottom,0px)}
+ .mobile-bottom-nav .mobile-nav-item{height:60px}
+ .control-panel-wrapper.is-mobile{position:absolute!important;top:0!important;bottom:0!important;height:100%!important;max-height:100%}
+ .global-console-container{position:absolute;bottom:0;max-height:calc(100% - 48px)}
+ .global-console-container>.device-console:not(.is-maximized){height:100%!important;min-height:0;max-height:100%}
+ .app-container .global-console-container .device-console.is-maximized{top:var(--app-visible-top,0px)!important;bottom:auto!important;height:var(--app-visible-height,100dvh)!important;width:100%!important}
+ .app-container:has(>.mobile-bottom-nav) .global-console-container{bottom:calc(60px + env(safe-area-inset-bottom,0px));max-height:calc(100% - 108px - env(safe-area-inset-bottom,0px))}
+}
+@container maa-window (max-width:640px){
+ .maa-task-count .maa-task-scroll-hint{display:inline}
+ .maa-workspace[data-view=tasks]{display:flex;flex-direction:column;overflow:hidden}
+ .maa-workspace[data-view=tasks]>.maa-task-pane{flex:1;min-height:0;overflow:hidden}
+ .maa-workspace[data-view=tasks] .maa-task-card{flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain}
+ .maa-workspace[data-view=tasks] .maa-after{flex:none;margin-top:8px}
+ .maa-workspace[data-view=tasks] .maa-link-start{flex:none;margin-top:8px;min-height:44px!important}
+ .maa-workspace[data-view=tasks] .maa-task-count{flex:none;margin:4px 0}
+ .maa-workspace>.maa-param-pane{min-height:0}
+}
+@media(max-width:1024px) and (max-height:500px){
+ .maa-window-title{display:none}
+ .maa-desktop .maa-tabs button{height:36px;min-height:36px}
+ .maa-mobile-views{padding:4px 10px}
+ .maa-mobile-views button{min-height:32px}
+ .maa-workspace[data-view=tasks] .maa-task-count{display:none}
+}

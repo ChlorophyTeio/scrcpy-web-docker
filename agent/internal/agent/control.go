@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -39,7 +40,11 @@ func encodeControlEvent(event map[string]any) ([]byte, error) {
 	case "set_clipboard":
 		return encodeClipboard(event)
 	case "get_clipboard":
-		return []byte{8, 0}, nil
+		copyKey, err := uint32FieldDefault(event, "copy_key", 0)
+		if err != nil || copyKey > 1 {
+			return nil, errors.New("invalid clipboard copy key")
+		}
+		return []byte{8, byte(copyKey)}, nil
 	case "reset_video":
 		return []byte{17}, nil
 	case "request_keyframe":

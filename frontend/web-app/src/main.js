@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import './utils/cryptoPolyfill'
 
 // 全局 Fetch 拦截器，自动注入 Authorization Token 并处理 401 响应
@@ -70,3 +71,20 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.mount('#app')
+
+import './utils/controlHelp'
+import './styles/local-refinements.css'
+
+import './styles/camera-refinements.css'
+
+import './styles/sidebar-refinements.css'
+import './styles/control-window.css'
+
+import './styles/console-refinements.css'
+import './styles/device-row-balance.css'
+import './styles/mobile-viewport.css'
+import {trackMobileViewport} from './utils/mobileViewport'
+const stopMobileViewport=trackMobileViewport()
+if(import.meta.hot)import.meta.hot.dispose(stopMobileViewport)
+import './styles/page-refinements.css'
+import './styles/phone-management.css'

@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -5,6 +6,26 @@ import (
 	"encoding/binary"
 	"testing"
 )
+
+func TestClipboardReadsAndRemoteCopyUseSeparateProtocolActions(t *testing.T) {
+	for _, tc := range []struct {
+		event map[string]any
+		want  byte
+	}{
+		{map[string]any{"type": "get_clipboard"}, 0},
+		{map[string]any{"type": "get_clipboard", "copy_key": float64(1)}, 1},
+	} {
+		got, err := encodeControlEvent(tc.event)
+		if err != nil || !bytes.Equal(got, []byte{8, tc.want}) {
+			t.Fatalf("clipboard action = %v, error = %v", got, err)
+		}
+	}
+	for _, key := range []any{float64(-1), float64(2), float64(256), "copy"} {
+		if _, err := encodeControlEvent(map[string]any{"type": "get_clipboard", "copy_key": key}); err == nil {
+			t.Fatalf("accepted unsupported copy key: %v", key)
+		}
+	}
+}
 
 func TestEncodeControlEvents(t *testing.T) {
 	key, err := encodeControlEvent(map[string]any{"type": "inject_keycode", "action": float64(0), "keycode": float64(4)})

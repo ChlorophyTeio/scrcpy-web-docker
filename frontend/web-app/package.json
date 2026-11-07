@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node ../../tools/frontend-licenses.mjs",
-    "test": "node --test --test-isolation=none src/utils/*.test.js",
+    "test": "node --test src/utils/*.test.js src/plugins/*/utils/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,0 +1,59 @@
+.media-stage{display:contents}
+.is-camera-surveillance .camera-stage{display:block;position:absolute;inset:58px 12px 92px;overflow:hidden;border-radius:12px;background:#03070c;min-width:0;min-height:0}
+.is-camera-surveillance .video-wrapper{background:radial-gradient(ellipse at center,#111e2b,#05090f 78%)}
+.is-camera-surveillance .camera-osd-bar{height:auto;min-height:46px;box-sizing:border-box;padding:10px 150px 10px 16px;font-family:inherit;background:#0c141ef2;border-bottom:1px solid #253244;gap:12px}
+.is-camera-surveillance .osd-left,.is-camera-surveillance .osd-right{min-width:0;flex-wrap:wrap;gap:6px 10px}
+.is-camera-surveillance .osd-title{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.is-camera-surveillance .osd-divider{display:none}
+.is-camera-surveillance .osd-clock{font-variant-numeric:tabular-nums;font-size:11px;color:#94a6ba}
+.is-camera-surveillance .osd-badge:not(.live-dot){color:#aab7c9;background:#253244;white-space:nowrap}
+.camera-quickbar{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:12px;right:12px;z-index:91;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;padding:10px;border:1px solid #324153;border-radius:14px;background:#121d2ef2;box-shadow:0 8px 28px #0006;box-sizing:border-box}
+.camera-view-switch{display:flex;border:1px solid #3b4d62;border-radius:9px;padding:2px;gap:2px}
+.camera-action{font:inherit;font-size:12px;min-height:38px;padding:8px 12px;border:1px solid transparent;border-radius:7px;background:#223045;color:#e4edf7;cursor:pointer;white-space:nowrap;touch-action:manipulation;user-select:none;-webkit-touch-callout:none}
+.camera-action.active{background:#174d49;color:#92f3dc;border-color:#427b70}
+.camera-action.recording{background:#6c2737;color:#ffccd3}
+.camera-action:disabled{opacity:.35;cursor:not-allowed}
+.camera-zoom-readout{font-size:12px;color:#93adc7;min-width:36px;text-align:center;font-variant-numeric:tabular-nums}
+.is-camera-surveillance .camera-sidebar{width:272px;background:#0b121d;border-color:#263447}
+.is-camera-surveillance .camera-sidebar-scroll{overscroll-behavior:contain;scrollbar-width:thin}
+.is-camera-surveillance .cam-btn{min-height:42px}
+.is-camera-surveillance .cam-section{background:#121e2c;border-color:#28394d;border-radius:12px}
+.is-camera-surveillance .mobile-close-fab{top:7px;right:8px;width:36px;height:36px;z-index:100}
+.is-camera-surveillance .fullscreen-fab{top:7px;right:50px;z-index:100}
+.is-camera-surveillance .webfullscreen-fab{top:7px;right:96px;z-index:100}
+.is-camera-surveillance .pip-fab{top:7px;right:142px;z-index:100}
+.is-camera-surveillance .mobile-fab-container{z-index:102}
+@media(max-width:1024px){
+ .is-camera-surveillance .camera-osd-bar{padding:10px 96px 10px 12px;align-items:flex-start;min-height:72px;font-size:11px}
+ .is-camera-surveillance .osd-left{gap:6px 9px}
+ .is-camera-surveillance .osd-right,.is-camera-surveillance .osd-title,.is-camera-surveillance .osd-bitrate,.is-camera-surveillance .osd-center{display:none}
+ .is-camera-surveillance .camera-stage{inset:80px 8px 150px}
+ .camera-quickbar{left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));gap:5px;padding:8px}
+ .camera-action{min-height:44px;padding:8px 11px;font-size:12px}
+ .camera-zoom-readout{display:none}
+ .is-camera-surveillance .mobile-fab-container:not(.is-dragging){bottom:160px}
+ .is-camera-surveillance .mobile-fab-menu{max-height:min(65dvh,560px);overflow-y:auto;overscroll-behavior:contain}
+}
+@media(max-width:1024px) and (orientation:landscape){
+ .is-camera-surveillance .camera-osd-bar{min-height:44px}
+ .is-camera-surveillance .camera-stage{inset:50px 8px 78px}
+ .camera-quickbar{flex-wrap:nowrap;padding:5px;gap:4px}
+ .camera-action{min-height:40px;padding:6px 10px}
+ .is-camera-surveillance .mobile-fab-container:not(.is-dragging){bottom:88px}
+}
+/* A desktop side pane can be as narrow as a phone: size controls to the pane. */
+.is-camera-surveillance{container:camera-panel / inline-size}
+.is-camera-surveillance .camera-stage{bottom:calc(var(--camera-toolbar-height,128px) + 24px)!important}
+.is-camera-surveillance .mobile-fab-main{display:none}
+.is-camera-surveillance .mobile-fab-container{position:absolute;right:12px!important;left:auto!important;top:auto!important;bottom:calc(var(--camera-toolbar-height,128px) + 30px)!important;width:0;height:0}
+.is-camera-surveillance .mobile-fab-menu,.is-camera-surveillance .mobile-fab-menu.align-top{bottom:0!important;top:auto!important;right:0!important;left:auto!important;max-height:calc(100dvh - 230px);max-width:calc(100vw - 48px)}
+@container camera-panel (max-width:739px){
+ .is-camera-surveillance .camera-osd-bar{padding:10px 96px 10px 12px;align-items:flex-start;min-height:72px;font-size:11px}
+ .is-camera-surveillance .osd-left{gap:6px 9px}
+ .is-camera-surveillance .osd-right,.is-camera-surveillance .osd-title,.is-camera-surveillance .osd-bitrate,.is-camera-surveillance .osd-center{display:none}
+ .is-camera-surveillance .camera-stage{top:80px;left:8px;right:8px}
+ .camera-quickbar{left:8px;right:8px;gap:5px;padding:8px}
+ .camera-action{min-height:44px;padding:8px 11px;font-size:12px}
+ .camera-zoom-readout{display:none}
+}
+@media(max-width:1024px) and (orientation:landscape){.is-camera-surveillance .camera-stage{top:50px}.is-camera-surveillance .camera-osd-bar{min-height:44px}}

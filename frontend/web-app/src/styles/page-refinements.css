@@ -1,0 +1,93 @@
+/* Shared page rhythm; streaming surfaces keep their own geometry. */
+:root{--text-secondary:#a4adbd;--border:rgba(164,181,210,.16);--success:#45c99a;--page-surface:#171e2d;--page-muted:#a4adbd}
+.app-container{font-size:14px;line-height:1.5}
+.app-container :is(button,a,input,select,textarea):focus-visible{outline:2px solid #66bfff;outline-offset:3px}
+.app-container :is(button,a){touch-action:manipulation}
+.app-container button:disabled{cursor:not-allowed}
+.app-container .viewport{scrollbar-width:thin;scrollbar-color:#45536a transparent;scroll-padding:20px}
+.viewport>:is(.dashboard-container,.file-manager-page,.share-admin-page,.deploy-page,.admin-page-container,.batch-control-page,.advanced-container){min-width:0;max-width:1600px;margin-inline:auto;width:100%}
+.viewport :is(.panel-header,.page-header,.fm-header,.sidebar-header){gap:14px;flex-wrap:wrap}
+.viewport :is(.panel-header,.page-header,.fm-header) h2{font-size:18px;letter-spacing:.01em}
+.viewport :is(.header-actions,.fm-actions,.toolbar-actions,.maa-config-actions){display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.viewport :is(.admin-card,.summary-card,.form-section,.share-card,.fm-panel){border:1px solid var(--border);box-shadow:0 8px 26px #00000012;border-radius:12px}
+.viewport :is(.table-wrapper,.share-table-wrapper,.file-table-wrapper){overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+.viewport :is(.premium-table,.file-table) th{position:sticky;top:0;background:#20283b;z-index:1;white-space:nowrap}
+.viewport :is(.premium-table,.file-table) td{line-height:1.5;padding-block:13px}
+.viewport :is(.premium-table,.file-table) tbody tr:hover{background:#66bfff09}
+.viewport :is(.form-input,.device-select,.addr-select,.form-select){min-height:40px;border-radius:8px;max-width:100%}
+.viewport :is(.create-user-btn,.btn-refresh,.btn-card-connect,.fm-btn,.action-btn){min-height:36px;border-radius:8px}
+.viewport :is(.empty-state,.no-devices){padding:32px 20px;text-align:center;line-height:1.8;color:var(--page-muted)}
+.viewport :is(.batch-sidebar,.sidebar-panel){border-radius:12px;border:1px solid var(--border)}
+.viewport :is(.summary-cards){gap:12px}
+.viewport .summary-card{padding:18px;transition:background .15s,border-color .15s}
+.viewport :is(.form-hint,.sub-text,.section-desc){line-height:1.7;color:var(--page-muted)}
+.maa-desktop{border-radius:12px;border-color:#354150;background:#181e28;color:#e3e9f2}
+.maa-desktop .maa-window-title{padding:10px 16px;background:#202938;border-color:#354150;min-height:44px}
+.maa-desktop .maa-tabs{display:flex;overflow-x:auto;scrollbar-width:thin;flex:none;background:#1b2330;gap:0}
+.maa-desktop .maa-tabs button{flex:1 0 auto;min-width:90px;height:46px;white-space:nowrap;padding-inline:16px}
+.maa-desktop :is(.maa-task-card,.maa-param-pane,.maa-log-pane){border-color:#354150}
+.maa-desktop .maa-task-row{min-height:42px}
+.maa-desktop .maa-task-row.selected{background:#37aef414;border-radius:6px}
+.maa-desktop .maa-task-row label{gap:10px}
+.maa-desktop .maa-content-page{padding:24px;min-height:0;overflow:auto}
+.maa-desktop :is(button,input:not([type=checkbox]),select){border-radius:7px}
+.maa-desktop .primary{background:#087cb3;border-color:#2998ca;color:white}
+.maa-desktop .danger{color:#ffadb7}
+.maa-desktop .maa-message-bar{background:#202938;min-height:36px;padding:8px 16px;font-size:12px;border-color:#354150}
+.schedule-header{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+.schedule-notice{margin:16px 0;padding:12px 16px;border:1px solid #3d5974;border-radius:8px;background:#3c8bce0c;color:#b7c9dc;line-height:1.7}
+.schedule-feedback{min-height:22px;color:#8ee1c3;overflow-wrap:anywhere}.schedule-feedback.error{color:#ffabb7}
+.schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:16px}
+.schedule-card,.schedule-editor{background:#202734;border:1px solid #354150;border-radius:12px;padding:20px;min-width:0}
+.schedule-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.schedule-card h3{font-size:16px;overflow-wrap:anywhere}
+.schedule-state{border-radius:20px;padding:3px 10px;background:#354150;color:#b5becc;font-size:12px;white-space:nowrap}.schedule-state.enabled{background:#299c6b22;color:#75dfb3}
+.schedule-time{font-size:28px;font-variant-numeric:tabular-nums;margin:12px 0;font-weight:600}.schedule-time span{font-size:13px;margin-left:12px;color:#a9b6c8;font-weight:400}
+.schedule-task-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.schedule-task-chips span{padding:3px 8px;background:#293448;border-radius:5px;color:#c4d0df;font-size:12px}
+.schedule-result{font-size:12px;min-height:36px;color:#a9b6c8;overflow-wrap:anywhere;margin-block:12px}
+.schedule-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:14px;margin-block:16px}.schedule-fields label{display:flex;flex-direction:column;gap:7px;color:#b9c7d9}.schedule-fields :is(input,select){width:100%;min-height:40px}
+.schedule-check{display:flex;align-items:center;gap:10px;margin-block:12px}.schedule-editor{margin-block:16px;border-color:#338cb7}.schedule-empty{padding:40px 16px;text-align:center;border:1px dashed #45536a;border-radius:12px}.schedule-empty p{margin:12px 0;color:#a9b6c8}.schedule-legacy{margin-top:28px}.schedule-legacy>.schedule-card{margin-top:12px}
+@media(max-width:1024px){
+ .app-container .mobile-bottom-nav{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border-top:1px solid #354150;background:#1c2333;overscroll-behavior-x:contain}
+ .app-container .mobile-bottom-nav .mobile-nav-item{flex:1 0 64px;min-width:64px;max-width:100px;gap:5px}
+ .app-container .mobile-nav-text{font-size:11px}.app-container .mobile-nav-icon-svg{width:23px;height:23px}
+ .viewport>:is(.batch-control-page,.advanced-container){display:flex;flex-direction:column;height:auto;min-height:100%;overflow:visible;gap:12px}
+ .viewport :is(.batch-sidebar,.advanced-container>.sidebar-panel){width:100%;max-width:none;flex:none;max-height:280px;overflow:auto}
+ .viewport .admin-page-container{height:auto;overflow:visible;gap:14px}
+ .viewport .premium-table{min-width:720px}
+ .viewport :is(.fm-header,.page-header){align-items:stretch}
+ .viewport :is(.header-actions,.fm-device-panel){width:100%;min-width:0;flex-wrap:wrap}
+ .viewport .deploy-layout{display:flex;flex-direction:column;gap:16px}
+ .viewport .form-section{width:100%;padding:18px;min-width:0}
+ .viewport .summary-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .viewport .summary-card{padding:12px;min-width:0}
+ .maa-desktop .maa-content-page{padding:16px}
+ .maa-desktop .maa-config-actions button{min-height:40px}
+ .maa-desktop .maa-tabs button{min-width:82px;padding-inline:12px;font-size:13px}
+}
+@media(max-width:480px){
+ .app-container .viewport{padding:8px}
+ .viewport :is(.fm-header,.page-header){padding:14px}
+ .viewport .card-value{font-size:22px}
+ .maa-desktop .maa-title-device{display:none}
+ .maa-desktop .maa-window-title{padding:8px 12px}
+ .schedule-card,.schedule-editor{padding:16px}
+ .maa-desktop .maa-content-page{padding:12px}
+ .schedule-header .maa-config-actions{width:100%}.schedule-header .maa-config-actions button{flex:1}
+}
+@media(prefers-reduced-motion:reduce){.app-container *{scroll-behavior:auto!important;transition:none!important}}
+/* Keep these overrides above lazy-loaded component specificity. */
+.app-container .maa-desktop{background:#181e28;color:#e3e9f2;border-radius:12px;border-color:#354150}
+.app-container .maa-desktop .maa-config-actions button.primary{color:#fff;background:#087cb3;border-color:#2998ca}
+.app-container .maa-schedules .schedule-header h2{margin:0}
+.app-container .maa-desktop .maa-config-actions button.danger{color:#ffadb7}
+@media(max-width:640px){
+ .app-container .maa-desktop .maa-tabs button{flex:1 1 0;min-width:0;padding-inline:3px;font-size:12px}
+ .app-container .maa-desktop .maa-tabs{width:100%}
+ .app-container .schedule-empty{padding-block:26px}
+ .app-container .schedule-notice{font-size:12px;line-height:1.65}
+}
+.app-container .mobile-page-heading{flex:none;padding:12px 16px 8px;border-bottom:1px solid var(--border);background:#151c29}
+.mobile-page-heading h1{font-size:17px;line-height:1.5;font-weight:600}.mobile-page-heading p{font-size:12px;color:#a4adbd;margin-top:2px}
+.maa-enhancement-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:20px}.maa-enhancement-card{min-width:0;border:1px solid #354150;border-radius:10px;background:#202734;padding:18px}.maa-enhancement-card h3{margin-bottom:12px}.maa-copilot-summary{background:#172130;border-radius:8px;padding:14px;margin-block:16px;overflow-wrap:anywhere}.maa-copilot-summary p{font-size:12px;color:#a4b5c9;margin-top:6px}.maa-result-output{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:12px/1.7 ui-monospace,monospace;margin-top:12px}.maa-performance-info{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);gap:10px 20px;margin-block:18px}.maa-performance-info dt{color:#a4b5c9}.maa-performance-info dd{overflow-wrap:anywhere}.maa-table-scroll{overflow:auto;margin-block:16px}.maa-benchmark table{width:100%;border-collapse:collapse;text-align:left}.maa-benchmark :is(th,td){padding:10px 12px;border-bottom:1px solid #354150;white-space:nowrap}.maa-recognition-results{margin-top:26px}.maa-recognition-results details{margin-top:12px}.maa-recognition-results summary{cursor:pointer}.maa-desktop .maa-performance .maa-config-actions button.primary{color:white}.maa-performance .maa-benchmark{margin-top:24px}
+@media(max-width:800px){.maa-enhancement-grid{grid-template-columns:minmax(0,1fr)}.maa-performance-info{grid-template-columns:1fr;gap:5px}.maa-performance-info dd{margin-bottom:10px}.maa-enhancement-card{padding:14px}}
+.maa-stage-picker{margin-top:18px;border-top:1px solid #354150;padding-top:16px;min-width:0}.maa-stage-current{display:flex;align-items:center;justify-content:space-between;gap:10px}.maa-stage-current>div{display:flex;flex-direction:column;gap:5px;min-width:0}.maa-stage-current span{color:#7ccaff;overflow-wrap:anywhere}.maa-stage-current button{white-space:nowrap}.maa-stage-filters{display:flex;gap:8px;margin-block:12px}.maa-stage-filters input{flex:1;min-width:0}.maa-stage-groups{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin}.maa-stage-groups button{white-space:nowrap;flex:none}.maa-stage-groups button.active{color:#7ccaff;border-color:#2989b8;background:#0d709526}.maa-stage-list{max-height:290px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px;margin:8px 0;align-content:start;overscroll-behavior:contain}.maa-stage-option{display:flex;align-items:stretch;border:1px solid #354150;border-radius:8px;min-width:0;background:#202734}.maa-stage-option.selected{border-color:#2badeb;background:#0d709526}.maa-stage-option.closed{opacity:.65}.maa-stage-option .maa-stage-select{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:0!important;background:transparent!important;flex:1;min-width:0;padding:10px}.maa-stage-select strong{font-size:13px}.maa-stage-select small,.maa-stage-select span{font-size:11px;color:#b5c4d7;white-space:normal;overflow-wrap:anywhere;line-height:1.6}.maa-stage-option .maa-stage-favorite{flex:none;width:32px;padding:3px;border:0;background:transparent;color:#eac674}.maa-stage-custom{display:flex;flex-direction:column;gap:6px;margin-top:12px}.maa-stage-note{font-size:11px;color:#a4b5c9;line-height:1.7;margin-top:10px}.maa-stage-picker>p.error{color:#ffadb7}@media(max-width:640px){.maa-stage-filters{flex-wrap:wrap}.maa-stage-filters input{width:100%;flex-basis:100%}.maa-stage-list{max-height:260px;grid-template-columns:1fr}.maa-stage-groups button{min-height:38px}}

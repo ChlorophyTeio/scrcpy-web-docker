@@ -1,3 +1,4 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div class="multi-floating-workspace" ref="workspaceRef">
     <!-- 浮窗工作台快捷整理栏 -->
@@ -51,6 +52,7 @@
             <span v-if="getDeviceModel(id)" class="device-model-badge" :title="getDeviceModel(id)">{{ getDeviceModel(id) }}</span>
           </div>
           <div class="titlebar-actions" @mousedown.stop @click.stop>
+            <span :ref="el => { windowActionTargets[id] = el }" class="floating-window-tools"></span>
             <!-- 主控机标记/切换按钮 -->
             <button 
               class="win-btn master-btn" 
@@ -74,6 +76,7 @@
             :deviceId="id" 
             :isMini="true" 
             :showHeader="false"
+            :actions-target="windowActionTargets[id]"
           />
         </div>
 
@@ -109,6 +112,7 @@ import MultiDeviceItem from './MultiDeviceItem.vue'
 const deviceStore = useDeviceStore()
 const activeDeviceIds = computed(() => deviceStore.activeDeviceIds)
 const workspaceRef = ref(null)
+const windowActionTargets = reactive({})
 
 const windowStates = reactive({})
 const minimizedWindows = ref([])

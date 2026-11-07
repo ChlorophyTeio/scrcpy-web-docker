@@ -1,3 +1,4 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div class="multi-device-container">
     <!-- 顶部全局多机工具条 (Global Multi Bar) -->
@@ -9,7 +10,7 @@
             <rect x="2" y="3" width="8" height="18" rx="2"></rect>
             <rect x="14" y="3" width="8" height="18" rx="2"></rect>
           </svg>
-          <span class="brand-title">多机直连</span>
+          <span class="brand-title">{{activeDeviceIds.length===1?'手机远控':'多机直连'}}</span>
           <span class="device-count-badge">{{ activeDeviceIds.length }} 台</span>
         </div>
 
@@ -31,7 +32,7 @@
           <!-- 添加设备加入多开下拉菜单 -->
           <div class="add-device-dropdown-container" @click.stop>
             <button class="add-device-btn" @click="showAddMenu = !showAddMenu" title="添加更多虚机加入直连">
-              <span class="plus-icon">+</span> 添加虚机
+              <span class="plus-icon">+</span> 添加设备
             </button>
 
             <div v-if="showAddMenu" class="add-device-menu">

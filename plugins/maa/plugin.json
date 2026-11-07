@@ -1,0 +1,11 @@
+{
+  "id": "maa",
+  "name": "MAA",
+  "description": "明日方舟自动化任务、定时执行和版本资源管理",
+  "frontend": "maa",
+  "api_version": 1,
+  "target": "http://maa-web:8080",
+  "target_env": "SCRCPYCAT_MAA_URL",
+  "health_path": "/api/gui/plugin",
+  "health_match": {"id": "maa", "api_version": 1}
+}

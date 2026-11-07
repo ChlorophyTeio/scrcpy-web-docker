@@ -1,10 +1,11 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <!-- 分享免登录页：独立于后台布局与鉴权门，由 vue-router 直接渲染 -->
   <router-view v-if="isSharePage" />
   <div v-else-if="!authStore.isLoggedIn" style="width: 100vw; height: 100vh;">
     <Login />
   </div>
-  <div v-else class="app-container" :class="{ 'is-resizing': isResizing }">
+  <div v-else class="app-container" :class="{ 'is-resizing': isResizing, 'is-phone-console': isMainMatrixPage }">
     <!-- 1. 全局侧边导航 (仅PC显示) -->
     <nav class="side-nav" :class="{ expanded: isNavExpanded }" v-if="!isMobile">
       <button class="nav-brand" @click="isNavExpanded = !isNavExpanded" :title="isNavExpanded ? '收起侧边栏' : '展开侧边栏'">
@@ -20,13 +21,14 @@
         </span>
       </button>
       <div class="nav-links">
-        <a href="javascript:void(0)" @click="navigateTo('/')" class="nav-item" :class="{ active: !showDeployPage && !showFilePage && !showTerminalPage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showShareAdminPage }">
+        <a href="javascript:void(0)" @click="navigateTo('/')" class="nav-item" :class="{ active: !showDeployPage && !showFilePage && !showTerminalPage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showShareAdminPage && !showPluginPage }">
           <svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
           </svg>
-          <span class="nav-item-text">虚机</span>
+          <span class="nav-item-text">设备</span>
         </a>
+        <a href="javascript:void(0)" @click="navigateTo('/plugins/'+plugin.id)" v-for="plugin in pluginStore.available" :key="plugin.id" v-if="authStore.isAdmin" class="nav-item" :class="{ active: showPluginPage&&route.params.pluginId===plugin.id }" :title="plugin.description"><svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M7 12h6m-3-3v6m6-4h.01m2 3h.01"/></svg><span class="nav-item-text">{{plugin.name}}</span></a>
         <a href="javascript:void(0)" @click="navigateTo('/monitor')" class="nav-item" :class="{ active: showMonitorPage }">
           <svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -44,11 +46,11 @@
           </svg>
           <span class="nav-item-text">群控</span>
         </a>
-        <a href="javascript:void(0)" @click="navigateTo('/files')" class="nav-item" :class="{ active: showFilePage }" v-if="authStore.canFileLibrary">
+        <a href="javascript:void(0)" @click="navigateTo('/files')" class="nav-item" :class="{ active: showFilePage }" v-if="authStore.canFileLibrary || authStore.canShell">
           <svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
-          <span class="nav-item-text">文件</span>
+          <span class="nav-item-text">手机管理</span>
         </a>
         <a href="javascript:void(0)" @click="navigateTo('/deploy')" v-if="authStore.isAdmin" class="nav-item" :class="{ active: showDeployPage }">
           <svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -99,7 +101,7 @@
           <span class="nav-item-text">退出</span>
         </a>
       </div>
-      <div class="nav-tag-group" v-if="!showDeployPage && !showFilePage && !showMonitorPage && !showAdvancedPage && !showShareAdminPage">
+      <div class="nav-tag-group" v-if="!showDeployPage && !showFilePage && !showMonitorPage && !showAdvancedPage && !showShareAdminPage && !showPluginPage">
         <div class="nav-tag-group-title">
           <span>标签</span>
           <button v-if="authStore.isAdmin" class="nav-tag-manage-btn" @click="openTagManager">
@@ -165,9 +167,9 @@
       <header class="top-bar" v-if="!isMobile">
         <!-- 1. 左侧：页面主标题与在线设备数 -->
         <div class="top-bar-left">
-          <h1 class="page-title">{{ showDeployPage ? '云端自动化部署' : (showFilePage ? '云设备文件中心' : (showMonitorPage ? '云监控实时大盘' : (showAdvancedPage ? '定制外设模拟' : (showShareAdminPage ? '分享与卡密管理' : (showBatchPage ? '批量任务群控' : (showUserAdminPage ? '用户权限管理' : '设备矩阵')))))) }}</h1>
+          <h1 class="page-title">{{ showPluginPage ? (activePluginName+' 插件') : (showDeployPage ? '云端自动化部署' : (showFilePage ? '手机管理' : (showMonitorPage ? '云监控实时大盘' : (showAdvancedPage ? '定制外设模拟' : (showShareAdminPage ? '分享与卡密管理' : (showBatchPage ? '批量任务群控' : (showUserAdminPage ? '用户权限管理' : '手机控制台'))))))) }}</h1>
           
-          <!-- 设备矩阵主页展示在线状态徽标 -->
+          <!-- 手机控制台主页展示在线状态徽标 -->
           <div class="top-device-stats" v-if="isMainMatrixPage">
             <span class="device-stat-chip online" title="当前在线虚机数量">
               <span class="stat-dot"></span>
@@ -187,7 +189,7 @@
               ref="topSearchInputRef"
               v-model="deviceStore.searchQuery"
               type="text"
-              placeholder="搜索虚机名称、IP、ID或标签... (⌘K)"
+              placeholder="搜索设备、型号或标签… (⌘K)"
               @keydown.esc="deviceStore.searchQuery = ''"
             />
             <button 
@@ -373,9 +375,10 @@
         </div>
       </header>
       
-      <section class="viewport">
+      <header v-if="isMobile && mobilePageMeta && !showFilePage" class="mobile-page-heading"><h1>{{mobilePageMeta[0]}}</h1><p>{{mobilePageMeta[1]}}</p></header>
+      <section class="viewport" :class="{'is-plugin-viewport':showPluginPage}">
         <transition name="fade" mode="out-in">
-          <DeviceList v-if="!showDeployPage && !showFilePage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showAdvancedPage && !showShareAdminPage" />
+          <DeviceList v-if="!showDeployPage && !showFilePage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showAdvancedPage && !showShareAdminPage && !showPluginPage" />
           <UserAdminPage v-else-if="showUserAdminPage" />
           <ShareAdminPage v-else-if="showShareAdminPage" />
           <DeployPage v-else-if="showDeployPage" />
@@ -383,6 +386,7 @@
           <Dashboard v-else-if="showMonitorPage" />
           <BatchControlPage v-else-if="showBatchPage" />
           <AdvancedPage v-else-if="showAdvancedPage" />
+          <PluginPage v-else-if="showPluginPage" />
         </transition>
       </section>
 
@@ -444,14 +448,15 @@
     </aside>
 
     <!-- 4. 移动端底部导航栏 (仅在主视图显示活跃虚机视频时才隐藏，在文件、终端或列表页均保持可见) -->
-    <nav class="mobile-bottom-nav" v-if="isMobile && (showFilePage || showTerminalPage || showDeployPage || showMonitorPage || showUserAdminPage || showBatchPage || showAdvancedPage || !deviceStore.activeDeviceId)">
-      <button @click="navigateTo('/')" class="mobile-nav-item" :class="{ active: !showDeployPage && !showFilePage && !showTerminalPage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showAdvancedPage && !showShareAdminPage }">
+    <nav aria-label="主导航，可左右滑动查看更多" class="mobile-bottom-nav" v-if="isMobile && (showFilePage || showTerminalPage || showDeployPage || showMonitorPage || showUserAdminPage || showBatchPage || showAdvancedPage || showShareAdminPage || showPluginPage || !deviceStore.activeDeviceId)">
+      <button @click="navigateTo('/')" class="mobile-nav-item" :class="{ active: !showDeployPage && !showFilePage && !showTerminalPage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showAdvancedPage && !showShareAdminPage && !showPluginPage }">
         <svg class="mobile-nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
           <line x1="12" y1="18" x2="12.01" y2="18"></line>
         </svg>
-        <span class="mobile-nav-text">虚机</span>
+        <span class="mobile-nav-text">设备</span>
       </button>
+      <button @click="navigateTo('/plugins/'+plugin.id)" v-for="plugin in pluginStore.available" :key="plugin.id" v-if="authStore.isAdmin" class="mobile-nav-item" :class="{ active: showPluginPage&&route.params.pluginId===plugin.id }" :title="plugin.description"><svg class="mobile-nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M7 12h6m-3-3v6m6-4h.01m2 3h.01"/></svg><span class="mobile-nav-text">{{plugin.name}}</span></button>
       <button @click="navigateTo('/monitor')" class="mobile-nav-item" :class="{ active: showMonitorPage }">
         <svg class="mobile-nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -469,11 +474,11 @@
         </svg>
         <span class="mobile-nav-text">群控</span>
       </button>
-      <button @click="navigateTo('/files')" v-if="authStore.canFileLibrary" class="mobile-nav-item" :class="{ active: showFilePage }">
+      <button @click="navigateTo('/files')" v-if="authStore.canFileLibrary || authStore.canShell" class="mobile-nav-item" :class="{ active: showFilePage }">
         <svg class="mobile-nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
-        <span class="mobile-nav-text">文件</span>
+        <span class="mobile-nav-text">手机</span>
       </button>
       <button @click="navigateTo('/terminal')" v-if="authStore.canShell" class="mobile-nav-item" :class="{ active: deviceStore.showGlobalConsole }">
         <svg class="mobile-nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -491,6 +496,9 @@
         </svg>
         <span class="mobile-nav-text">管理</span>
       </button>
+      <button v-if="authStore.isAdmin" @click="navigateTo('/deploy')" class="mobile-nav-item" :class="{active:showDeployPage}"><span class="mobile-nav-icon-svg" aria-hidden="true">＋</span><span class="mobile-nav-text">部署</span></button>
+      <button @click="navigateTo('/advanced')" class="mobile-nav-item" :class="{active:showAdvancedPage}"><span class="mobile-nav-icon-svg" aria-hidden="true">⌘</span><span class="mobile-nav-text">外设</span></button>
+      <button v-if="authStore.isAdmin" @click="navigateTo('/shares')" class="mobile-nav-item" :class="{active:showShareAdminPage}"><span class="mobile-nav-icon-svg" aria-hidden="true">↗</span><span class="mobile-nav-text">分享</span></button>
     </nav>
     
   </div>
@@ -498,31 +506,45 @@
 
 <script setup>
 import { loadRemoteDeviceSettings } from '@/utils/settings'
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDeviceStore } from '@/stores/devices'
 import { useTagStore } from '@/stores/tags'
 import { useAuthStore } from '@/stores/auth'
+import {usePluginStore} from '@/stores/plugins'
 import DeviceClient from '@/views/DeviceClient.vue'
 import DeviceList from '@/views/DeviceList.vue'
-import DeployPage from '@/views/DeployPage.vue'
-import FileManagerPage from '@/views/FileManagerPage.vue'
-import DeviceConsole from '@/components/DeviceConsole.vue'
-import Dashboard from '@/views/Dashboard.vue'
+const DeployPage = defineAsyncComponent(() => import('@/views/DeployPage.vue'))
+const FileManagerPage = defineAsyncComponent(() => import('@/views/PhoneManagerPage.vue'))
+const DeviceConsole = defineAsyncComponent(() => import('@/components/DeviceConsole.vue'))
+const Dashboard = defineAsyncComponent(() => import('@/views/Dashboard.vue'))
 import Login from '@/views/Login.vue'
-import UserAdminPage from '@/views/UserAdminPage.vue'
-import BatchControlPage from '@/views/BatchControlPage.vue'
-import AdvancedPage from '@/views/AdvancedPage.vue'
-import ShareAdminPage from '@/views/ShareAdminPage.vue'
+const UserAdminPage = defineAsyncComponent(() => import('@/views/UserAdminPage.vue'))
+const BatchControlPage = defineAsyncComponent(() => import('@/views/BatchControlPage.vue'))
+const AdvancedPage = defineAsyncComponent(() => import('@/views/AdvancedPage.vue'))
+const PluginPage = defineAsyncComponent(() => import('@/views/PluginPage.vue'))
+const ShareAdminPage = defineAsyncComponent(() => import('@/views/ShareAdminPage.vue'))
 import MultiDeviceContainer from '@/components/multi/MultiDeviceContainer.vue'
 import { useGroupControlStore } from '@/stores/groupControl'
 
 const deviceStore = useDeviceStore()
 const tagStore = useTagStore()
 const authStore = useAuthStore()
+const pluginStore=usePluginStore()
+const activePluginName=computed(()=>pluginStore.entries.find(p=>p.id===route.params.pluginId)?.name||'功能')
 const groupControlStore = useGroupControlStore()
 
 const route = useRoute()
+const mobilePageMeta = computed(() => ({
+ '/monitor':['监控大盘','设备状态与运行趋势'],
+ '/files':['手机管理','文件、进程与应用'],
+ '/batch':['群控任务','选择设备，批量下发操作'],
+ '/deploy':['设备接入','连接与部署新设备'],
+ '/advanced':['外设控制','管理设备外设与模拟输入'],
+ '/shares':['分享管理','管理访问链接与连接权限'],
+ '/admin':['用户管理','账号、设备分配与访问权限']
+}[route.path] || null))
+
 const router = useRouter()
 // /share 为访客免登录分享页：渲染 router-view，不初始化后台数据与信令
 const isSharePage = computed(() => route.path === '/share')
@@ -560,6 +582,7 @@ const showUserAdminPage = ref(false)
 const showBatchPage = ref(false)
 const showAdvancedPage = ref(false)
 const showShareAdminPage = ref(false)
+const showPluginPage = ref(false)
 const isNavExpanded = ref(false)
 const showHelpMenu = ref(false)
 const showDisplayMenu = ref(false)
@@ -573,7 +596,7 @@ const isMainMatrixPage = computed(() =>
   !showUserAdminPage.value && 
   !showBatchPage.value && 
   !showAdvancedPage.value && 
-  !showShareAdminPage.value
+  !showShareAdminPage.value && !showPluginPage.value
 )
 
 function dispatchTopAction(action) {
@@ -621,7 +644,7 @@ const accountExpiryText = computed(() => {
 
 const floatPos = ref({ x: 100, y: 100 })
 const floatSize = ref({ w: 600, h: 800 })
-const sideWidth = ref(420)
+const sideWidth = ref(520)
 
 // 动态样式计算
 const panelStyle = computed(() => {
@@ -659,7 +682,7 @@ function handleRecommendLayout({ isLandscape, ratio }) {
     if (isLandscape) {
       sideWidth.value = Math.min(window.innerWidth * 0.7, window.innerHeight * ratio + 40)
     } else {
-      sideWidth.value = 420
+      sideWidth.value = 520
     }
   }
 }
@@ -762,6 +785,7 @@ function getTagDeviceCount(tagId) {
 }
 
 const initApp = () => {
+  if(authStore.isLoggedIn&&authStore.isAdmin)pluginStore.start()
   if (authStore.isLoggedIn && !isSharePage.value) {
     authStore.fetchMe()
     tagStore.load()
@@ -800,6 +824,8 @@ const onWindowClick = () => {
   showDisplayMenu.value = false
 }
 
+watch(()=>[authStore.isLoggedIn,authStore.isAdmin],([logged,admin])=>{if(logged&&admin&&!isSharePage.value)pluginStore.start();else pluginStore.stop()})
+
 const handleNavigateEvent = (e) => {
   if (e && e.detail) {
     navigateTo(e.detail)
@@ -827,6 +853,7 @@ watch(() => authStore.isLoggedIn, (newVal) => {
   }
 })
 onUnmounted(() => {
+  pluginStore.stop()
   if (expiryTimer) clearInterval(expiryTimer)
   window.removeEventListener('resize', updateMedia)
   window.removeEventListener('click', onWindowClick)
@@ -851,16 +878,18 @@ const pageFlags = {
   '/batch': showBatchPage,
   '/admin': showUserAdminPage,
   '/advanced': showAdvancedPage,
-  '/shares': showShareAdminPage
+  '/shares': showShareAdminPage,
 }
 
 function applyPageRoute(path) {
+  let pluginRoute=/^\/plugins\/[a-z][a-z0-9-]{0,31}$/.test(path)
+  if(pluginRoute&&(!authStore.isAdmin||(pluginStore.loaded&&!pluginStore.isAvailable(path.split('/')[2])))){path='/';pluginRoute=false}
   const allowed = {
     '/deploy': authStore.isAdmin,
     '/admin': authStore.isAdmin,
     '/shares': authStore.isAdmin,
     '/batch': authStore.canBatchTasks,
-    '/files': authStore.canFileLibrary,
+    '/files': authStore.canFileLibrary || authStore.canShell,
     '/terminal': authStore.canShell
   }
   if (allowed[path] === false) path = '/'
@@ -868,10 +897,11 @@ function applyPageRoute(path) {
     deviceStore.showGlobalConsole = true
     path = '/'
   }
-  if (path !== '/' && !pageFlags[path]) path = '/'
+  if (path !== '/' && !pageFlags[path]&&!pluginRoute) path = '/'
   for (const [pagePath, visible] of Object.entries(pageFlags)) {
     visible.value = pagePath === path
   }
+  showPluginPage.value=pluginRoute
   showTerminalPage.value = false
   if (!authStore.canShell) deviceStore.showGlobalConsole = false
   if (route.path !== path) router.replace(path)
@@ -887,7 +917,7 @@ function navigateTo(path) {
 
 // 深链接、浏览器前进后退与菜单点击共用页面状态；等用户策略加载后再判断权限。
 watch(() => [route.path, authStore.isLoggedIn, authStore.userPolicy,
-  authStore.isAdmin, authStore.canBatchTasks, authStore.canFileLibrary, authStore.canShell], () => {
+  authStore.isAdmin, authStore.canBatchTasks, authStore.canFileLibrary, authStore.canShell,pluginStore.loaded,pluginStore.available.map(p=>p.id).join(',')], () => {
   if (!isSharePage.value && authStore.isLoggedIn && (authStore.noAuthMode || authStore.userPolicy)) {
     applyPageRoute(route.path)
   }

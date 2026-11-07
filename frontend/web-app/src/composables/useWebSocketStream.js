@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 /**
  * useWebSocketStream - 基于 WebSocket H.264 裸流与信令交互的极速投屏与直控 Composable
  *
@@ -145,6 +146,7 @@ export function useWebSocketStream(deviceId, options = {}) {
   let lastSps = null
   let lastPps = null
   let hasReceivedKeyFrame = false
+  let latestKeyFrame = null
 
   // 触控序列号与防抖
   let touchSeq = 0
@@ -225,6 +227,8 @@ export function useWebSocketStream(deviceId, options = {}) {
             } catch (e) {}
             videoDecoder = null
             initDecoder('wasm')
+            // 静止画面可能不再产生新帧，回放已缓存的关键帧初始化软件解码器。
+            if (latestKeyFrame) feedFrame(latestKeyFrame.data, true, latestKeyFrame.ptsUs)
           }
         })
 
@@ -269,6 +273,7 @@ export function useWebSocketStream(deviceId, options = {}) {
   // 接收 H.264 裸帧进行解码
   function feedFrame(nalu, isKey, ptsUs) {
     byteCount += nalu.length
+    if (isKey) latestKeyFrame = { data: new Uint8Array(nalu), ptsUs }
 
     // 首帧关键帧保护
     if (!hasReceivedKeyFrame) {
@@ -644,6 +649,7 @@ export function useWebSocketStream(deviceId, options = {}) {
     signaling.connect()
     error.value = null
     hasReceivedKeyFrame = false
+    latestKeyFrame = null
     isFirstFrameRendered.value = false
 
     if (options.bitrate) {

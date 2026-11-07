@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -36,7 +37,11 @@ func parseStreamOptions(raw map[string]any, preview bool) (streamOptions, error)
 	// only works while charging. keep_active follows the capture lifecycle,
 	// also works on battery, and works with local mode's cleanup=false.
 	options.Values["keep_active"] = strconv.FormatBool(awake)
-	options.Values["power_on"] = strconv.FormatBool(!preview || awake)
+	// Keeping Android active and turning on its physical panel are separate
+	// actions. Capture is restarted for quality changes, fallback and MAA's
+	// resolution changes; none of these should undo a user's screen-off action.
+	// Users can still explicitly wake the phone or turn its panel on.
+	options.Values["power_on"] = "false"
 	var err error
 	options.Bitrate, err = parseBitrateOptions(raw)
 	if err != nil {
@@ -120,6 +125,9 @@ func (options streamOptions) arguments() []string {
 	for key, value := range options.Values {
 		values[key] = value
 	}
+	// Quick/group controls can create a capture without parseStreamOptions.
+	// Apply the same non-waking policy there and reject stale power_on values.
+	values["power_on"] = "false"
 	// Let MediaCodec choose its compatible profile on the first launch. The
 	// actual SPS is used for WebRTC negotiation and browser decoder setup.
 	var keys []string

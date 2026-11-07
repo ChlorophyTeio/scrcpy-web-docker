@@ -1,0 +1,54 @@
+/* Consistent touch targets, with navigation and clipboard actions near the top. */
+.device-panel-view>aside.control-sidebar{width:184px;flex:0 0 184px;box-sizing:border-box;align-items:stretch;padding:0;gap:0;overflow:hidden;background:#0e1825;border-left:1px solid #2b3c50}
+.control-sidebar .sidebar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:48px;padding:7px 10px;box-sizing:border-box;border-bottom:1px solid #2b3c50;flex:none}
+.sidebar-toolbar-title{font-size:12px;font-weight:600;color:#d8e6f2;white-space:nowrap}
+.sidebar-size-toggle{min-height:32px;min-width:40px;padding:5px 8px;border:1px solid #395268;border-radius:7px;background:#192b3c;color:#bcd9ef;font:inherit;font-size:11px;cursor:pointer;touch-action:manipulation}
+.control-sidebar .sidebar-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#40566c transparent}
+.control-sidebar .sidebar-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;align-items:stretch;box-sizing:border-box;width:100%;padding:0 0 12px;margin:0 0 10px;border-bottom:1px solid #27384b}
+.control-sidebar .sidebar-group:last-child{margin-bottom:0;border-bottom:0;padding-bottom:0}
+.control-sidebar .sidebar-group-title{grid-column:1/-1;margin:0 0 1px;font-size:11px;font-weight:500;line-height:20px;color:#8fa7bd}
+.control-sidebar button.sidebar-btn,.control-sidebar button.screen-power-button,.control-sidebar button.unlock-device-button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%;min-width:0;min-height:52px;height:auto;box-sizing:border-box;margin:0;padding:8px 3px;border:1px solid #2d4155;border-radius:9px;background:#192a3d;color:#d0e0ed;box-shadow:none;transition:background .15s,border-color .15s,color .15s;font-family:inherit;font-size:11px;line-height:1.3;touch-action:manipulation}
+.control-sidebar .sidebar-btn .icon,.control-sidebar .screen-power-button svg,.control-sidebar .unlock-device-button svg{width:18px;height:18px;min-height:18px;margin:0;flex:none}
+.control-sidebar .sidebar-btn .btn-text{font-size:11px;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.control-sidebar button:hover:not(:disabled){background:#263f57;border-color:#5487aa;color:#fff}
+.control-sidebar button:focus-visible,.sidebar-more summary:focus-visible{outline:2px solid #67ceff;outline-offset:2px}
+.control-sidebar button:disabled{opacity:.4;cursor:not-allowed}
+.control-sidebar .sidebar-btn.active{color:#98e9d5;background:#19443f;border-color:#418b77}
+.control-sidebar button.screen-power-button{color:#92e1cc;border-color:#355c54;background:#15322f}
+.control-sidebar button.screen-power-button.is-screen-off{color:#f3cb89;border-color:#6e5635;background:#332b20}
+.control-sidebar button.unlock-device-button{color:#a3d5fc;border-color:#355d7c;background:#173049}
+.control-sidebar .navigation-group{grid-template-columns:repeat(3,minmax(0,1fr))}
+.control-sidebar .clipboard-group{grid-template-columns:minmax(0,1fr)}
+.control-sidebar .clipboard-group .sidebar-btn{flex-direction:row;justify-content:flex-start;gap:10px;min-height:42px;padding:9px 12px;background:#152f43;border-color:#2e536c;color:#acdfff}
+.clipboard-link-controls{display:flex;gap:6px}
+.clipboard-link-controls button{min-height:32px;border:1px solid #37617b;border-radius:7px;background:#17354a;color:#b6e3fc;font:inherit;font-size:11px;cursor:pointer;touch-action:manipulation}
+.clipboard-link-toggle{flex:1;padding:5px 6px}
+.clipboard-link-toggle[aria-checked="true"]{color:#9be2cc;background:#1a3c38;border-color:#3a7568}
+.clipboard-sync-now{padding:5px 10px}
+.control-sidebar .clipboard-link-status{margin:0;color:#92afc5;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.control-sidebar .sidebar-btn-wrapper{min-width:0;width:100%;display:flex;position:relative}
+.control-sidebar .sidebar-btn-delete{right:0;top:0;width:24px;height:24px;border-radius:6px;background:#5b2835;color:#ffbac4;border:1px solid #a65b6c;font-size:16px}
+.control-sidebar .sidebar-btn-wrapper:focus-within .sidebar-btn-delete{opacity:1}
+.control-sidebar .sidebar-footer{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:9px;border-top:1px solid #2c3b4d;background:#101d2a}
+.control-sidebar .sidebar-footer>.sidebar-btn{min-height:42px;flex-direction:row;gap:5px;padding:6px;font-size:11px}
+.sidebar-more{min-width:0;align-self:center;grid-column:2}
+.sidebar-more summary{min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid #34485d;border-radius:9px;color:#9db3c8;font-size:11px;cursor:pointer;box-sizing:border-box;padding:6px}
+.sidebar-more[open]{grid-column:1/-1}
+.sidebar-more[open] summary{margin-bottom:6px}
+.control-sidebar .sidebar-btn.danger{color:#efacb8;background:#30232c;border-color:#60404c}
+.control-sidebar .sidebar-agent-version{grid-column:1/-1;text-align:center;padding:2px 0;font-size:9px;line-height:12px;color:#7b92a8}
+.device-panel-view>aside.control-sidebar.is-compact{width:78px;flex-basis:78px}
+.control-sidebar.is-compact .sidebar-toolbar{justify-content:center;padding:6px}
+.control-sidebar.is-compact .sidebar-scroll{padding:7px}
+.control-sidebar.is-compact .sidebar-group,.control-sidebar.is-compact .sidebar-footer{grid-template-columns:minmax(0,1fr)}
+.control-sidebar.is-compact .sidebar-group-title{text-align:center}
+.control-sidebar.is-compact .clipboard-group .sidebar-btn{flex-direction:column;justify-content:center;padding:8px 2px;gap:5px;min-height:52px}
+.control-sidebar.is-compact .clipboard-group .btn-text{font-size:10px}
+.control-sidebar.is-compact .clipboard-link-controls{flex-direction:column;gap:4px}
+.control-sidebar.is-compact .clipboard-link-controls button{padding:5px 2px;font-size:10px}
+.control-sidebar.is-compact .sidebar-footer{padding:7px}
+.control-sidebar.is-compact .sidebar-more{grid-column:1}
+.control-sidebar.is-compact .sidebar-footer>.sidebar-btn{flex-direction:column}
+.device-panel-view.is-web-fullscreen>aside.control-sidebar{top:12px!important;bottom:12px!important;right:8px!important;transform:none!important;width:184px!important;max-height:calc(100% - 24px)!important;border:1px solid #3b5265!important;border-radius:12px!important;background:#0e1825ed!important}
+.device-panel-view.is-web-fullscreen>aside.control-sidebar.is-compact{width:78px!important}
+@media(prefers-reduced-motion:reduce){.control-sidebar button{transition:none}}

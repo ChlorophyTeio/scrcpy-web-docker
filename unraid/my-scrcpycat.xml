@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Container version="2">
+  <Name>scrcpy-web</Name>
+  <Repository>chlorophyimo/scrcpycat:latest</Repository>
+  <Registry>https://hub.docker.com/r/chlorophyimo/scrcpycat</Registry>
+  <Network>scrcpycat</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/ChlorophyTeio/scrcpy-web-docker/issues</Support>
+  <Project>https://github.com/ChlorophyTeio/scrcpy-web-docker</Project>
+  <Category>Tools:</Category>
+  <Icon>https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/frontend/web-app/public/favicon.svg</Icon>
+  <WebUI>https://[IP]:[PORT:9443]/</WebUI>
+  <Overview>网页、USB ADB 和手机 agent 合并容器。PostgreSQL 17、Redis 为外部依赖；MAA 为可选插件。</Overview>
+  <ExtraParams>--restart=unless-stopped --stop-timeout=30 --device-cgroup-rule='c 189:* rwm'</ExtraParams>
+  <Config Name="HTTPS 网页" Target="9443" Default="9015" Mode="tcp" Type="Port" Display="always" Required="true" Mask="false" Description="">9015</Config>
+  <Config Name="WebRTC UDP" Target="40000-40100" Default="40000-40100" Mode="udp" Type="Port" Display="always" Required="true" Mask="false" Description="">40000-40100</Config>
+  <Config Name="持久化数据" Target="/data" Default="/mnt/user/appdata/scrcpycat" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/mnt/user/appdata/scrcpycat</Config>
+  <Config Name="USB 热插拔" Target="/dev/bus/usb" Default="/dev/bus/usb" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/dev/bus/usb</Config>
+  <Config Name="SCRCPYCAT_PUBLIC_URL" Target="SCRCPYCAT_PUBLIC_URL" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="完整网页访问地址，例如 https://主机地址:9015" />
+  <Config Name="SCRCPYCAT_WEBRTC_HOST_IPS" Target="SCRCPYCAT_WEBRTC_HOST_IPS" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="Unraid 的局域网 IP，逗号分隔多个地址。" />
+  <Config Name="SCRCPYCAT_POSTGRES_DSN" Target="SCRCPYCAT_POSTGRES_DSN" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="true" Description="现有 PostgreSQL 17 的专用数据库连接。" />
+  <Config Name="SCRCPYCAT_REDIS_URL" Target="SCRCPYCAT_REDIS_URL" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="同网络 Redis 地址。" />
+  <Config Name="SCRCPYCAT_ADMIN_USERNAME" Target="SCRCPYCAT_ADMIN_USERNAME" Default="admin" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="">admin</Config>
+  <Config Name="SCRCPYCAT_ADMIN_PASSWORD" Target="SCRCPYCAT_ADMIN_PASSWORD" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="true" Description="首次管理员密码，自行填写。" />
+  <Config Name="SCRCPYCAT_JWT_SECRET" Target="SCRCPYCAT_JWT_SECRET" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="true" Description="自行生成并持久保留的随机长字符串。" />
+  <Config Name="插件服务地址" Target="SCRCPYCAT_MAA_URL" Default="http://maa-web:8080" Mode="" Type="Variable" Display="always" Required="false" Mask="false" Description="">http://maa-web:8080</Config>
+</Container>

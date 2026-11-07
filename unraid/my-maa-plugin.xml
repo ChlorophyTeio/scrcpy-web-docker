@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Container version="2">
+  <Name>maa-web</Name>
+  <Repository>chlorophyimo/scrcpycat-maa:latest</Repository>
+  <Registry>https://hub.docker.com/r/chlorophyimo/scrcpycat-maa</Registry>
+  <Network>scrcpycat</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/ChlorophyTeio/scrcpy-web-docker/issues</Support>
+  <Project>https://github.com/ChlorophyTeio/scrcpy-web-docker</Project>
+  <Category>Tools:</Category>
+  <Icon>https://raw.githubusercontent.com/ChlorophyTeio/scrcpy-web-docker/main/plugins/maa/icon.svg</Icon>
+  <WebUI />
+  <Overview>可选 MAA 插件。启动并就绪后自动出现在 ScrcpyCat；首次启动下载核心资源。无独立公开网页端口。</Overview>
+  <ExtraParams>--restart=unless-stopped --stop-timeout=40</ExtraParams>
+  <Config Name="配置" Target="/app/config" Default="/mnt/user/appdata/scrcpycat-maa/config" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/mnt/user/appdata/scrcpycat-maa/config</Config>
+  <Config Name="核心与资源" Target="/root/.local/share/maa" Default="/mnt/user/appdata/scrcpycat-maa/data" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/mnt/user/appdata/scrcpycat-maa/data</Config>
+  <Config Name="下载缓存" Target="/root/.cache/maa" Default="/mnt/user/appdata/scrcpycat-maa/cache" Mode="rw" Type="Path" Display="always" Required="true" Mask="false" Description="">/mnt/user/appdata/scrcpycat-maa/cache</Config>
+  <Config Name="共享 ADB" Target="ADB_SERVER_SOCKET" Default="tcp:scrcpy-web:5037" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="">tcp:scrcpy-web:5037</Config>
+  <Config Name="手机 ADB 序列号" Target="MAA_DEVICE" Default="" Mode="" Type="Variable" Display="always" Required="true" Mask="false" Description="填写 ScrcpyCat 在线设备标识。" />
+</Container>

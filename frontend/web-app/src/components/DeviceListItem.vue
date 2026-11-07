@@ -1,3 +1,4 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div
     class="device-table-row"
@@ -53,6 +54,14 @@
         <span v-if="device.info?.displays?.[0]" class="res-text">
           ({{ device.info.displays[0].x_res }}×{{ device.info.displays[0].y_res }})
         </span>
+      </div>
+      <div class="quick-screen-controls" role="group" :aria-label="`${device.id} 的屏幕控制`" @click.stop>
+        <button type="button" class="quick-screen-action" :disabled="device.status !== 'online'" title="模拟手机电源键：锁屏或唤醒。仅关闭实体屏幕请使用右侧熄屏。" @click.stop="lockDevice">
+          <svg class="quick-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9M6.3 5.9a8 8 0 1 0 11.4 0" /></svg>
+          <span>锁屏/唤醒</span>
+        </button>
+        <ScreenPowerButton :device-id="device.id" :disabled="device.status !== 'online'" show-icon />
+        <UnlockDeviceButton v-if="authStore.canShell" :device-id="device.id" :disabled="device.status !== 'online'" />
       </div>
     </div>
 
@@ -118,9 +127,9 @@
         class="action-btn primary-action" 
         @click="onRowClick" 
         :disabled="device.status !== 'online'"
-        title="进入控制"
+        title="打开手机远控"
       >
-        控制
+        开始远控
       </button>
 
       <button 
@@ -146,7 +155,7 @@
           <circle cx="4" cy="8" r="1.5"/>
           <circle cx="8" cy="8" r="1.5"/>
           <circle cx="12" cy="8" r="1.5"/>
-        </svg>
+        </svg><span class="more-action-label">更多</span>
       </button>
     </div>
 
@@ -162,6 +171,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
         摄像头监控模式
       </button>
+      <button v-if="device.status==='online'&&(authStore.canShell||authStore.canFileLibrary)" class="menu-item" @click.stop="openManager('files')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h6l2 2h10v11H3z"/></svg>文件 / 应用 / 进程管理</button>
       <button class="menu-item" @click.stop="onSettings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51-1z"></path></svg>
         连接设置
@@ -189,7 +199,13 @@
 </template>
 
 <script setup>
+function openManager(tab){showMenu.value=false;window.dispatchEvent(new CustomEvent('cloudphone-navigate',{detail:'/files?device='+encodeURIComponent(props.device.id)+'&tab='+tab}))}
+
+function lockDevice(){deviceStore.sendGroupControlEvent([props.device.id],{type:'inject_keycode',action:0,keycode:26});deviceStore.sendGroupControlEvent([props.device.id],{type:'inject_keycode',action:1,keycode:26})}
+
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import ScreenPowerButton from './ScreenPowerButton.vue'
+import UnlockDeviceButton from './UnlockDeviceButton.vue'
 import DeviceThumbnail from './DeviceThumbnail.vue'
 import { useDeviceStore } from '@/stores/devices'
 import { useGroupControlStore } from '@/stores/groupControl'

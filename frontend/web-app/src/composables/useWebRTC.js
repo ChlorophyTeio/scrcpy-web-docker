@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import { ref, onUnmounted } from 'vue'
 import { useDeviceStore } from '@/stores/devices'
 import { debugInfo, debugLog, debugWarn } from '@/utils/debug'
@@ -609,6 +610,14 @@ async function handleDeviceMessage(payload) {
 
     pc.ontrack = (evt) => {
       debugLog('[WebRTC] ontrack event:', evt.track.kind, evt.streams)
+      if (evt.track.kind === 'video') {
+        // Request a short playout buffer for interactive control; browsers may adapt under jitter.
+        try {
+          if ('jitterBufferTarget' in evt.receiver) evt.receiver.jitterBufferTarget = 30
+          if ('playoutDelayHint' in evt.receiver) evt.receiver.playoutDelayHint = 0.03
+        } catch {}
+      }
+
       if (evt.track.kind === 'audio') {
         // 减少浏览器默认的音频预缓冲；不支持该提示的浏览器保留自身策略。
         if ('jitterBufferTarget' in evt.receiver) {
@@ -1252,22 +1261,22 @@ async function handleDeviceMessage(payload) {
       return true
     }
     if (ws?.readyState === WebSocket.OPEN) {
-      sendInjectData('clipboard', { type: 'set_clipboard', text, paste: Boolean(normalized.paste) })
+      sendInjectData('clipboard', { type: 'set_clipboard', text, paste: Boolean(normalized.paste), source: normalized.source || 'local', suppress_broadcast: Boolean(normalized.suppressBroadcast) })
       return true
     }
     return false
   }
 
-  function getClipboard() {
+  function getClipboard({ copy = false } = {}) {
     if (viewOnly) return false
     if (clipboardChannel && clipboardChannel.readyState === 'open') {
       clipboardChannel.send(JSON.stringify({
-        type: 'get_clipboard'
+        type: 'get_clipboard', copy_key: copy ? 1 : 0
       }))
       return true
     }
     if (ws?.readyState === WebSocket.OPEN) {
-      sendInjectData('clipboard', { type: 'get_clipboard' })
+      sendInjectData('clipboard', { type: 'get_clipboard', copy_key: copy ? 1 : 0 })
       return true
     }
     return false

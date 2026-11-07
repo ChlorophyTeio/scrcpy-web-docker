@@ -1,3 +1,4 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <Teleport to="body">
     <div class="settings-modal">
@@ -33,6 +34,9 @@
         <div class="modal-body custom-scrollbar">
           <!-- 🎥 视频面板 -->
           <div v-if="activeTab === 'video'" class="tab-pane">
+            <div class="quality-presets" aria-label="画质预设">
+              <button v-for="preset in qualityPresets" :key="preset.name" type="button" :disabled="isLocked('size') || isLocked('fps') || isLocked('bitrate')" @click="applyQualityPreset(preset)"><strong>{{ preset.name }}</strong><small>{{ preset.description }}</small></button>
+            </div>
             <div class="form-group">
               <label>分辨率限制 (Max Size) <span v-if="isLocked('size')" class="lock-tag">🔒 分享者已锁定</span></label>
               <input type="number" v-model.number="localSettings.size" min="0" step="100" :disabled="isLocked('size')" />
@@ -338,6 +342,16 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save', 'reset'])
 
 const localSettings = ref({ ...props.settings })
+const qualityPresets = [
+  { name: '流畅', description: '弱网 · 1280 / 30帧', size: 1280, fps: 30, bitrate: 3, minBitrate: 2, maxBitrate: 5 },
+  { name: '均衡', description: '日常 · 1920 / 60帧', size: 1920, fps: 60, bitrate: 8, minBitrate: 4, maxBitrate: 12 },
+  { name: '原画', description: '局域网 · 原分辨率 / 60帧', size: 0, fps: 60, bitrate: 16, minBitrate: 8, maxBitrate: 24 }
+]
+function applyQualityPreset(preset) {
+  const { name, description, ...values } = preset
+  Object.assign(localSettings.value, values, { bwe: true, renderEngine: 'video', videoCodecOptions: 'i-frame-interval:int=1,profile:int=1', showStats: true })
+}
+
 const activeTab = ref('video')
 
 function isLocked(section) {
@@ -812,4 +826,8 @@ function resetToGlobal() {
     text-align: center;
   }
 }
+</style>
+
+<style scoped>
+.quality-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 22px}.quality-presets button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:14px 12px;background:rgba(98,227,196,.07);border:1px solid rgba(98,227,196,.25);border-radius:12px;color:inherit;cursor:pointer;min-height:80px;text-align:left}.quality-presets button:hover{background:rgba(98,227,196,.16)}.quality-presets small{font-size:11px;opacity:.7;line-height:1.5}.quality-presets button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:600px){.quality-presets{gap:6px}.quality-presets button{padding:12px 8px}.quality-presets small{font-size:10px}}
 </style>

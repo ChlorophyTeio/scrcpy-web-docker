@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -83,20 +84,20 @@ func (p *adbCapture) Wait() error {
 
 func (p *adbCapture) Diagnostics() string { return p.diagnostics.String() }
 
-func captureArguments(config Config, scid string, options streamOptions, cleanup bool) []string {
+func captureArguments(config Config, scid string, options streamOptions) []string {
 	level := "info"
 	if options.Debug {
 		level = "debug"
 	}
 	args := []string{"/", "com.genymobile.scrcpy.Server", config.ScrcpyVersion,
-		"scid=" + scid, "log_level=" + level, "tunnel_forward=true", fmt.Sprintf("cleanup=%t", cleanup),
+		"scid=" + scid, "log_level=" + level, "tunnel_forward=true", "cleanup=false",
 		"control=true", "video_codec=h264", "audio_codec=opus",
 		"send_frame_meta=true", "send_device_meta=true", "send_stream_meta=true"}
 	return append(args, options.arguments()...)
 }
 
 func (d localDevice) Launch(_ context.Context, config Config, scid string, options streamOptions) (captureProcess, error) {
-	command := exec.Command("app_process", captureArguments(config, scid, options, false)...)
+	command := exec.Command("app_process", captureArguments(config, scid, options)...)
 	command.Env = append(os.Environ(), "CLASSPATH="+config.ScrcpyJar)
 	diagnostics := &captureDiagnostics{limit: captureDiagnosticsLimit}
 	output := io.MultiWriter(os.Stdout, diagnostics)
@@ -160,7 +161,10 @@ func (d *adbDevice) Launch(ctx context.Context, config Config, scid string, opti
 	if err != nil {
 		return nil, err
 	}
-	command, err := adbclient.Command("app_process", captureArguments(config, scid, options, true)...)
+	// The agent owns staged JAR cleanup (Wait/removeStage and prepareDirectory).
+	// scrcpy's cleanup helper also restores panel power on exit, which would
+	// undo screen-off on disconnect, reconfiguration or MAA resolution changes.
+	command, err := adbclient.Command("app_process", captureArguments(config, scid, options)...)
 	if err != nil {
 		d.removeJar(path)
 		return nil, err
@@ -189,6 +193,6 @@ func (d *adbDevice) Probe(ctx context.Context, config Config, output io.Writer) 
 	}
 	defer d.removeJar(path)
 	command, _ := adbclient.Command("app_process", "/", "com.genymobile.scrcpy.Server", config.ScrcpyVersion,
-		"cleanup=true", "list_displays=true", "list_cameras=true")
+		"cleanup=false", "list_displays=true", "list_cameras=true")
 	return d.client.Run(ctx, d.serial, strings.Join([]string{"CLASSPATH=" + adbclient.Quote(path), "exec", command}, " "), output, output)
 }

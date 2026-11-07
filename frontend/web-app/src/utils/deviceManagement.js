@@ -1,0 +1,2 @@
+export function normalizeDevicePath(value){const input=String(value||'/sdcard').trim();const parts=[];for(const part of input.split('/')){if(!part||part==='.')continue;if(part==='..'){parts.pop();continue}parts.push(part)}return '/'+parts.join('/')}
+export function validFileName(value){return typeof value==='string'&&value.length>0&&new TextEncoder().encode(value).length<=255&&!['.','..'].includes(value)&&!/[\/\\\x00-\x1f\x7f]/.test(value)}

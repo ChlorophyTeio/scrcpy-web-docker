@@ -1,0 +1,108 @@
+{
+  "Mall-Entry": {
+    "next": [
+      "MallDefault",
+      "WebMall-EntryOCR"
+    ]
+  },
+  "WebMall-EntryOCR": {
+    "algorithm": "OcrDetect",
+    "text": [
+      "采购中心"
+    ],
+    "fullMatch": true,
+    "roi": [
+      760,
+      400,
+      260,
+      170
+    ],
+    "action": "ClickSelf",
+    "postDelay": 700,
+    "next": [
+      "#self",
+      "Stop"
+    ]
+  },
+  "CreditShop-BuyIt": {
+    "algorithm": "JustReturn",
+    "action": "DoNothing",
+    "postDelay": 0,
+    "next": [
+      "WebMall-BuyItem",
+      "WebMall-HireOperator"
+    ]
+  },
+  "WebMall-BuyItem": {
+    "template": "BuyIt.png",
+    "action": "ClickSelf",
+    "roi": [
+      800,
+      500,
+      250,
+      150
+    ],
+    "postDelay": 1500,
+    "next": [
+      "CreditShop-Bought",
+      "CreditShop-BuyIt@LoadingText",
+      "CreditShop-NoMoney"
+    ],
+    "algorithm": "MatchTemplate"
+  },
+  "WebMall-HireOperator": {
+    "algorithm": "OcrDetect",
+    "text": [
+      "聘用干员",
+      "聘用员"
+    ],
+    "fullMatch": true,
+    "roi": [
+      850,
+      550,
+      180,
+      70
+    ],
+    "action": "ClickSelf",
+    "postDelay": 1500,
+    "next": [
+      "WebMall-OperatorSkip",
+      "WebMall-OperatorFinish",
+      "CreditShop-NoMoney",
+      "WebMall-HireOperator@LoadingText"
+    ]
+  },
+  "WebMall-OperatorSkip": {
+    "baseTask": "RecruitSkip",
+    "reduceOtherTimes": [],
+    "next": [
+      "WebMall-ReturnedToStore",
+      "WebMall-OperatorSkip",
+      "WebMall-OperatorFinish"
+    ]
+  },
+  "WebMall-OperatorFinish": {
+    "baseTask": "RecruitFinish",
+    "reduceOtherTimes": [],
+    "next": [
+      "WebMall-ReturnedToStore",
+      "WebMall-OperatorSkip",
+      "WebMall-OperatorFinish",
+      "WebMall-OperatorFinish@LoadingText"
+    ]
+  },
+  "WebMall-ReturnedToStore": {
+    "algorithm": "OcrDetect",
+    "text": [
+      "信用交易所"
+    ],
+    "fullMatch": true,
+    "roi": [
+      1000,
+      0,
+      280,
+      170
+    ],
+    "action": "Stop"
+  }
+}

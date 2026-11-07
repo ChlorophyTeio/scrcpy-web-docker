@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -69,6 +70,9 @@ func newMediaPeer(configuration webrtc.Configuration, options bitrateOptions, pr
 		return nil, nil, err
 	}
 	settings := webrtc.SettingEngine{}
+	if err := containerICE(&settings); err != nil {
+		return nil, nil, err
+	}
 	switch preference {
 	case "ipv4":
 		settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4, webrtc.NetworkTypeTCP4})

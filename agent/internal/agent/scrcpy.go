@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -114,10 +115,8 @@ func (b *scrcpyBridge) stopLocked() error {
 		b.videoReady = nil
 	}
 	if b.controlConn != nil {
-		if b.device.adb == nil && b.options.PowerOff && b.options.Source != "camera" {
-			_ = b.controlConn.SetWriteDeadline(time.Now().Add(200 * time.Millisecond))
-			_, _ = b.controlConn.Write([]byte{10, 1})
-		}
+		// Panel power belongs to explicit user controls. Closing or replacing a
+		// capture must not undo screen-off, including in on-device agent mode.
 		_ = b.controlConn.Close()
 		b.controlConn = nil
 	}

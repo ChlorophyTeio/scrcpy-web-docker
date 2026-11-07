@@ -1,0 +1,39 @@
+#!/bin/bash
+set -eu
+state=/app/config/.phone-display-state
+adb=/opt/android/adb
+profile=/app/config/maa/profiles/default.toml
+restore() {
+    [ -f "$state/device" ] || return 0
+    local device size awake
+    device=$(cat "$state/device")
+    size=$(cat "$state/size")
+    awake=$(cat "$state/awake")
+    "$adb" -s "$device" get-state >/dev/null || return 1
+    "$adb" -s "$device" shell wm size "$size"
+    if [ "$awake" = null ]; then
+        "$adb" -s "$device" shell settings delete global stay_on_while_plugged_in
+    else
+        "$adb" -s "$device" shell settings put global stay_on_while_plugged_in "$awake"
+    fi
+    rm -f "$state/device" "$state/size" "$state/awake"
+    echo 'Phone resolution and sleep settings restored.'
+}
+case "${1:-}" in
+prepare)
+    restore
+    device=$(sed -n 's/^[[:space:]]*device[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$profile")
+    [ -n "$device" ]
+    original=$("$adb" -s "$device" shell wm size | sed -n 's/^Override size: //p' | tr -d '\r')
+    awake=$("$adb" -s "$device" shell settings get global stay_on_while_plugged_in | tr -d '\r')
+    mkdir -p "$state"
+    printf '%s\n' "${original:-reset}" > "$state/size"
+    printf '%s\n' "$awake" > "$state/awake"
+    printf '%s\n' "$device" > "$state/device"
+    "$adb" -s "$device" shell settings put global stay_on_while_plugged_in 7
+    "$adb" -s "$device" shell wm size 1080x1920
+    echo 'Phone prepared for MAA: 1080x1920, USB stay-awake enabled.'
+    ;;
+restore) restore ;;
+*) echo 'Usage: maa-phone-display prepare|restore' >&2; exit 2 ;;
+esac

@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package agent
 
 import (
@@ -13,6 +14,49 @@ import (
 	"testing"
 	"time"
 )
+
+func TestQuickControlsAndCaptureReplacementNeverEnablePanelRestoration(t *testing.T) {
+	for _, options := range []streamOptions{
+		{Preview: true}, // Quick/group controls bypass the stream option parser.
+		{PowerOff: true},
+		{Values: map[string]string{"power_on": "true"}},
+	} {
+		args := strings.Join(captureArguments(Config{ScrcpyVersion: "4.1"}, "test", options), " ")
+		if !strings.Contains(args, "cleanup=false") || strings.Contains(args, "cleanup=true") ||
+			!strings.Contains(args, "power_on=false") || strings.Contains(args, "power_on=true") {
+			t.Fatalf("capture can wake the device or restore its panel on replacement: %s", args)
+		}
+	}
+}
+
+func TestStoppingCaptureDoesNotTurnPanelBackOn(t *testing.T) {
+	for _, mode := range []string{"local", "adb"} {
+		t.Run(mode, func(t *testing.T) {
+			backend := localBackend()
+			if mode == "adb" {
+				backend.adb = &adbDevice{}
+			}
+			bridge := newScrcpyBridge(Config{}, backend)
+			client, server := net.Pipe()
+			defer server.Close()
+			bridge.controlConn = client
+			bridge.options = streamOptions{PowerOff: true, Source: "display"}
+			data := make(chan []byte, 1)
+			go func() { content, _ := io.ReadAll(server); data <- content }()
+			if err := bridge.Stop(); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case content := <-data:
+				if len(content) != 0 {
+					t.Fatalf("disconnect sent an unsolicited panel-power command: %v", content)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("capture control connection remained open")
+			}
+		})
+	}
+}
 
 func TestScrcpyServerSurvivesRepeatedSessions(t *testing.T) {
 	dir := t.TempDir()

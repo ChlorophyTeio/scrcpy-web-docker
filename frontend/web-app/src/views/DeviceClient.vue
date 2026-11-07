@@ -1,5 +1,6 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
-  <div class="device-panel-view" :class="{ 'is-mobile': isMobile, 'mobile-landscape': isMobile && isVideoLandscape, 'is-web-fullscreen': isWebFullscreen, 'is-camera-surveillance': isCameraMode }" @mousemove="onFsUiActivity" @touchstart.passive="onFsUiActivity">
+  <div class="device-panel-view" ref="cameraPanel" :style="{ '--camera-toolbar-height': cameraBarHeight + 'px' }" :class="{ 'is-mobile': isMobile, 'mobile-landscape': isMobile && isVideoLandscape && !isCameraMode, 'is-web-fullscreen': isWebFullscreen, 'has-window-header': !!headerTarget, 'is-camera-surveillance': isCameraMode }" @mousemove="onFsUiActivity" @touchstart.passive="onFsUiActivity">
     <!-- 主内容区 (视频部分) -->
     <div class="device-client-main">
       <!-- 主视频容器 -->
@@ -7,12 +8,12 @@
         <!-- 监控专属 OSD 水印状态栏 -->
         <div v-if="isCameraMode" class="camera-osd-bar">
           <div class="osd-left">
-            <span class="osd-badge live-dot">● 实时监控</span>
+            <span class="osd-badge" :class="{ 'live-dot': cameraFrameReady }">{{ cameraFrameReady ? '● 实时画面' : '○ ' + (currentWebRTC.status.value === 'connected' ? '等待画面' : statusText) }}</span>
             <span class="osd-item osd-title" :title="currentId">{{ currentId }}</span>
             <span class="osd-divider">|</span>
             <span class="osd-item osd-lens">📷 {{ currentLensName }}</span>
             <span class="osd-divider">|</span>
-            <span class="osd-item osd-res">{{ currentResText }}</span>
+            <span class="osd-item osd-res">{{ cameraActualResolution }}</span>
             <span class="osd-item osd-fps" v-if="videoStats">{{ videoStats.fps }}fps</span>
             <span class="osd-divider" v-if="videoStats">|</span>
             <span class="osd-item osd-bitrate" v-if="videoStats" :title="`视频接收码率 (目标: ${videoStats.targetBitrate || localSettings.bitrate || 4} Mbps)`">
@@ -36,32 +37,17 @@
           </div>
         </div>
 
-        <!-- 移动端退出按钮 (右上角) -->
-        <button v-if="isMobile && !isMobileFullscreen" class="mobile-close-fab" @click="deviceStore.clearActiveDevice()" title="关闭连接">
-          ✕
-        </button>
+        <Teleport :to="headerTarget || 'body'" :disabled="!headerTarget">
+          <div class="client-window-actions" :class="{'inline-window-actions':!headerTarget}" aria-label="远控窗口操作" @pointerdown="deviceStore.focusDevice(currentId)" @mousedown.stop @click.stop>
+            <button type="button" class="window-action" title="截图" aria-label="截图" @click="isCameraMode ? takeCameraSnapshot() : takeScreenshot()"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="4"/></svg></button>
+            <button v-if="pictureInPictureSupported" type="button" class="window-action" :class="{active:isPiP}" :title="isPiP?'退出画中画':'画中画'" :aria-label="isPiP?'退出画中画':'画中画'" :aria-pressed="isPiP" @click="togglePictureInPicture"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="9" height="7" rx="1" fill="currentColor" stroke="none"/></svg></button>
+            <button type="button" class="window-action" :class="{active:isWebFullscreen}" :title="isWebFullscreen?'退出页面全屏':'页面全屏'" :aria-label="isWebFullscreen?'退出页面全屏':'页面全屏'" :aria-pressed="isWebFullscreen" @click="toggleWebFullscreen"><svg class="icon" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6"/></svg></button>
+            <button type="button" class="window-action" :class="{active:isFullscreen}" :title="isFullscreen?'退出系统全屏':'系统全屏'" :aria-label="isFullscreen?'退出系统全屏':'系统全屏'" :aria-pressed="isFullscreen" @click="toggleFullscreen"><svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+          </div>
+        </Teleport>
+        <p v-if="windowActionMessage" class="window-action-message" role="status">{{windowActionMessage}}</p>
 
-        <!-- 悬浮全屏按钮 (移入视频容器内，保证全屏时可见) -->
-        <button v-if="!isMobileFullscreen" class="fullscreen-fab" @click="toggleFullscreen" title="系统全屏">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-        </button>
-
-        <!-- 页面全屏按钮 -->
-        <button 
-          v-if="!isMobile" 
-          class="webfullscreen-fab" 
-          :class="{ 'is-active': isWebFullscreen }" 
-          @click="toggleWebFullscreen" 
-          :title="isWebFullscreen ? '退出页面全屏 (按 Esc 键)' : '页面全屏'"
-        >
-          <svg v-if="isWebFullscreen" class="icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          <svg v-else class="icon" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-        </button>
-        <!-- 画中画按钮 -->
-        <button v-if="!isMobile && pictureInPictureSupported" class="pip-fab" @click="togglePictureInPicture" :title="isPiP ? '退出画中画' : '画中画'">
-          <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><rect x="11" y="9" width="9" height="7" rx="1" ry="1" fill="currentColor" stroke="none"></rect></svg>
-        </button>
-
+        <div class="media-stage" :class="{ 'camera-stage': isCameraMode }" ref="mediaStage">
         <!-- WebCodecs / WebSocket 极速锁相 Canvas 渲染器 -->
         <canvas
           v-show="isCanvasRendering"
@@ -105,9 +91,26 @@
           @touchmove.prevent="onTouchMove"
           @touchend.prevent="onTouchEnd"
           @touchcancel.prevent="onTouchEnd"
+          @loadeddata="cameraHasFrame = true"
           @loadedmetadata="onVideoLoaded"
           @resize="onVideoResize"
         />
+
+        </div>
+
+        <div v-if="isCameraMode && !isMini" class="camera-quickbar" ref="cameraQuickbar" aria-label="摄像头快捷操作">
+          <div class="camera-view-switch" role="group" aria-label="画面显示方式">
+            <button class="camera-action" :class="{ active: cameraFit === 'contain' }" :aria-pressed="cameraFit === 'contain'" @click="cameraFit = 'contain'" title="完整显示画面，保持原始比例">完整</button>
+            <button class="camera-action" :class="{ active: cameraFit === 'cover' }" :aria-pressed="cameraFit === 'cover'" @click="cameraFit = 'cover'" title="铺满可用区域，边缘可能裁切">铺满</button>
+          </div>
+          <button class="camera-action" @click="rotateCamera" title="旋转画面 90 度">旋转</button>
+          <button class="camera-action" :class="{ active: cameraMirrored }" :aria-pressed="cameraMirrored" @click="toggleMirror" title="水平镜像画面">镜像</button>
+          <button class="camera-action" @click="resetPTZ" title="恢复完整画面、缩放和方向">复位</button>
+          <button class="camera-action" :disabled="!cameraFrameReady" @click="takeCameraSnapshot" title="将当前画面保存到浏览器下载目录">抓拍</button>
+          <button class="camera-action" :class="{ recording: isRecording }" :disabled="!cameraFrameReady && !isRecording" @click="toggleCameraRecording" title="在当前浏览器录像，停止后下载">{{ isRecording ? '停止 ' + formattedRecordingTime : '录像' }}</button>
+          <button v-if="cameraCompact" class="camera-action" @click="showMobileMenu = !showMobileMenu" :aria-expanded="showMobileMenu">镜头 / 更多</button>
+          <span class="camera-zoom-readout" title="滚轮或双击画面缩放">{{ cameraZoom.toFixed(1) }}×</span>
+        </div>
 
         <textarea
           v-if="!isCameraMode"
@@ -173,6 +176,11 @@
                 <button class="retry-btn ws-fallback-btn" @click="toggleStreamMode">⚡ 改用 WebSocket 投屏</button>
               </template>
             </template>
+            <template v-else-if="isCameraMode && currentWebRTC.status.value === 'connected' && !cameraFrameReady">
+              <div class="mini-spinner"></div>
+              <p>已连接，等待摄像头画面…</p>
+              <button class="retry-btn" @click="retry">重新连接</button>
+            </template>
             <template v-else-if="currentWebRTC.status.value === 'disconnected'">
               <p>连接已断开</p>
               <button class="retry-btn" @click="retry">重新连接</button>
@@ -181,10 +189,10 @@
         </div>
 
         <!-- 悬浮菜单展开时的全屏点击遮罩 -->
-        <div v-if="(isMobile || isFullscreen || isWebFullscreen) && showMobileMenu" class="fab-overlay" @mousedown.stop.prevent="showMobileMenu = false" @touchstart.stop.prevent="showMobileMenu = false"></div>
+        <div v-if="(isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen) && showMobileMenu" class="fab-overlay" @mousedown.stop.prevent="showMobileMenu = false" @touchstart.stop.prevent="showMobileMenu = false"></div>
 
         <!-- 手机端悬浮菜单 (移入视频容器内，保证全屏时可见) -->
-        <div v-if="isMobile || isFullscreen || isWebFullscreen" class="mobile-fab-container" :class="{ 'is-compact': isMobileFullscreen }" :style="fabStyle">
+        <div v-if="isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen" class="mobile-fab-container" :class="{ 'is-compact': isMobileFullscreen }" :style="fabStyle">
           <button class="mobile-fab-main" :class="{ 'active': showMobileMenu }"
             @mousedown="onFabStart" @mousemove="onFabMove" @mouseup="onFabEnd" @mouseleave="onFabEnd"
             @touchstart.prevent="onFabStart" @touchmove.prevent="onFabMove" @touchend.prevent="onFabEnd">
@@ -267,6 +275,8 @@
                 {{ isWebSocketMode ? '切回 WebRTC 直连' : '切换 WebSocket 投屏' }}
               </button>
               <div class="fab-divider"></div>
+              <ScreenPowerButton :device-id="currentId" class="fab-item" />
+              <UnlockDeviceButton v-if="authStore.canShell" :device-id="currentId" />
               <button class="fab-item" @click="quickKey('input keyevent 26'); showMobileMenu=false">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg> 电源
               </button>
@@ -301,15 +311,17 @@
               <button class="fab-item" @click="showSettingsModal = true; showMobileMenu=false">
                 <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> 设置
               </button>
+              <button class="fab-item" role="switch" :aria-checked="clipboardAutoSync" @click="setClipboardAutoSync(!clipboardAutoSync)">剪贴板联动：{{clipboardAutoSync?'开':'关'}}</button>
+              <button class="fab-item" @click="syncClipboardNow();showMobileMenu=false">同步剪贴板</button>
               <button class="fab-item" @click="sendClipboardToDevice(); showMobileMenu=false">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> 送剪贴板
+                <svg class="icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> 粘贴到手机
               </button>
               <button class="fab-item" @click="getClipboardFromDevice(); showMobileMenu=false">
                 <svg class="icon" viewBox="0 0 24 24">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                   <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                   <path d="M12 11v6M9 14l3 3 3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
-                </svg> 收剪贴板
+                </svg> 复制手机文字
               </button>
               
               <div class="fab-divider" v-if="customButtons.length > 0"></div>
@@ -342,10 +354,51 @@
       </div>
     </div>
 
-    <!-- PC 右侧控制栏 (常规云手机模式) -->
-    <div v-if="!isMobile && !isMini && !isCameraMode" class="control-sidebar" :class="{ 'fs-ui-visible': fsUiVisible }">
-      <div class="sidebar-group">
-        <button v-if="authStore.isAdmin" class="sidebar-btn group-control-btn" :class="{ active: groupControlStore.isGroupControlActive }" @click="toggleGroupControl" :title="groupControlStore.isGroupControlActive ? '退出群控主控模式' : '设为群控主控机'">
+    <div v-if="clipboardLinkState.pending!==null&&effectiveFocused&&!isCameraMode" class="clipboard-link-pending" role="status"><span>手机有新复制的文字</span><button type="button" @click="copyPendingClipboard">复制到本机</button><button type="button" class="dismiss" aria-label="忽略本次剪贴板同步" @click="clipboardLink.dismissPending()">×</button></div>
+
+    <!-- PC 快捷栏：常用操作优先，连接维护收纳到底部。 -->
+    <aside v-if="!isMobile && !isMini && !isCameraMode" class="control-sidebar" :class="{ 'fs-ui-visible': fsUiVisible, 'is-compact': sidebarCompact }" aria-label="手机快捷操作">
+      <div class="sidebar-toolbar"><span v-if="!sidebarCompact" class="sidebar-toolbar-title">快捷操作</span><button type="button" class="sidebar-size-toggle" @click="toggleSidebarCompact" :aria-expanded="!sidebarCompact" :title="sidebarCompact?'展开快捷操作':'收起快捷操作'">{{sidebarCompact?'展开':'收起'}}</button></div>
+      <div class="sidebar-scroll"><section class="sidebar-group navigation-group" role="group" aria-label="手机导航"><h3 class="sidebar-group-title">导航</h3><button class="sidebar-btn" @click="quickKey('input keyevent 3')" title="回到手机桌面">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span class="btn-text">首页</span>
+        </button><button class="sidebar-btn" @click="quickKey('input keyevent 4')" title="返回上一级">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+          <span class="btn-text">返回</span>
+        </button><button type="button" class="sidebar-btn" @click="quickKey('input keyevent 187')" title="最近任务"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h6M9 12h6"/></svg><span class="btn-text">最近</span></button></section><section class="sidebar-group " role="group" aria-label="屏幕与解锁"><h3 class="sidebar-group-title">屏幕</h3><ScreenPowerButton :device-id="currentId" class="sidebar-btn" show-icon /><UnlockDeviceButton v-if="authStore.canShell" :device-id="currentId" /><button class="sidebar-btn" @click="quickKey('input keyevent 26')" title="锁屏或唤醒手机；仅关闭实体屏幕请用熄屏">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+          <span class="btn-text">锁屏/唤醒</span>
+        </button></section><section class="sidebar-group clipboard-group" role="group" aria-label="复制与粘贴"><h3 class="sidebar-group-title">剪贴板</h3><div class="clipboard-link-controls"><button type="button" class="clipboard-link-toggle" role="switch" :aria-checked="clipboardAutoSync" @click="setClipboardAutoSync(!clipboardAutoSync)">{{clipboardAutoSync?'联动：开':'联动：关'}}</button><button type="button" class="clipboard-sync-now" @click="syncClipboardNow">同步</button></div><p class="clipboard-link-status" role="status">{{clipboardLinkStatus}}</p><button class="sidebar-btn" @click="sendClipboardToDevice" title="粘贴到手机">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <span class="btn-text">粘贴到手机</span>
+        </button><button class="sidebar-btn" @click="getClipboardFromDevice" title="复制手机文字">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            <path d="M12 11v6M9 14l3 3 3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+          </svg>
+          <span class="btn-text">复制手机文字</span>
+        </button></section><section class="sidebar-group " role="group" aria-label="手机音量和声音"><h3 class="sidebar-group-title">声音</h3><button class="sidebar-btn" @click="quickKey('input keyevent 24')" title="音量加">
+          <svg class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="19" y1="9" x2="19" y2="15"></line><line x1="16" y1="12" x2="22" y2="12"></line></svg>
+          <span class="btn-text">音量+</span>
+        </button><button class="sidebar-btn" @click="quickKey('input keyevent 25')" title="音量减">
+          <svg class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="19" y1="12" x2="15" y2="12"></line></svg>
+          <span class="btn-text">音量-</span>
+        </button><button class="sidebar-btn" :class="{ active: localSettings.audio && !pageAudioOff }" :disabled="!!audioUnavailableReason" @click="togglePageMute" :title="audioUnavailableReason || pageAudioAction">
+          <svg v-if="pageAudioOff" class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+          <svg v-else class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15 9a5 5 0 0 1 0 6"></path><path d="M17.7 6.3a9 9 0 0 1 0 11.4"></path></svg>
+          <span class="btn-text">{{ pageAudioAction }}</span>
+        </button></section><section class="sidebar-group " role="group" aria-label="远控工具"><h3 class="sidebar-group-title">工具</h3><button class="sidebar-btn" :class="{ active: deviceStore.showGlobalConsole && deviceStore.consoleDeviceId === currentId }" @click="toggleConsole" title="控制台">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span class="btn-text">终端</span>
+        </button><button class="sidebar-btn" @click="keymapStore.setEditMode(true)" title="按键映射">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+          <span class="btn-text">映射</span>
+        </button><button class="sidebar-btn" @click="keymapStore.toggleKeyHints()" :title="keymapStore.showKeyHints ? '隐藏按键提示' : '显示按键提示'">
+          <svg v-if="keymapStore.showKeyHints" class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <svg v-else class="icon" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+          <span class="btn-text">提示</span>
+        </button></section><section class="sidebar-group " role="group" aria-label="连接与群控"><h3 class="sidebar-group-title">连接</h3><button v-if="authStore.isAdmin" class="sidebar-btn group-control-btn" :class="{ active: groupControlStore.isGroupControlActive }" @click="toggleGroupControl" :title="groupControlStore.isGroupControlActive ? '退出群控主控模式' : '设为群控主控机'">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="9" rx="1"></rect>
             <rect x="14" y="3" width="7" height="5" rx="1"></rect>
@@ -353,73 +406,13 @@
             <rect x="3" y="16" width="7" height="5" rx="1"></rect>
           </svg>
           <span class="btn-text">{{ groupControlStore.isGroupControlActive ? '取消群控' : '群控主控' }}</span>
-        </button>
-        <button class="sidebar-btn" :class="{ active: isWebSocketMode }" @click="toggleStreamMode" :title="streamModeTitle" :disabled="isWebSocketMode && !webrtcAvailable">
+        </button><button class="sidebar-btn" :class="{ active: isWebSocketMode }" @click="toggleStreamMode" :title="streamModeTitle" :disabled="isWebSocketMode && !webrtcAvailable">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
           <span class="btn-text">{{ isWebSocketMode ? 'WS投屏' : 'WebRTC' }}</span>
-        </button>
-        <div class="sidebar-divider"></div>
-        <button class="sidebar-btn" @click="quickKey('input keyevent 26')" title="电源">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-          <span class="btn-text">电源</span>
-        </button>
-        <button class="sidebar-btn" @click="quickKey('input keyevent 3')" title="HOME">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          <span class="btn-text">首页</span>
-        </button>
-        <button class="sidebar-btn" @click="quickKey('input keyevent 4')" title="BACK">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
-          <span class="btn-text">返回</span>
-        </button>
-        <button class="sidebar-btn" @click="quickKey('input keyevent 24')" title="音量加">
-          <svg class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="19" y1="9" x2="19" y2="15"></line><line x1="16" y1="12" x2="22" y2="12"></line></svg>
-          <span class="btn-text">音量+</span>
-        </button>
-        <button class="sidebar-btn" @click="quickKey('input keyevent 25')" title="音量减">
-          <svg class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="19" y1="12" x2="15" y2="12"></line></svg>
-          <span class="btn-text">音量-</span>
-        </button>
-        <button class="sidebar-btn" :class="{ active: localSettings.audio && !pageAudioOff }" :disabled="!!audioUnavailableReason" @click="togglePageMute" :title="audioUnavailableReason || pageAudioAction">
-          <svg v-if="pageAudioOff" class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
-          <svg v-else class="icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15 9a5 5 0 0 1 0 6"></path><path d="M17.7 6.3a9 9 0 0 1 0 11.4"></path></svg>
-          <span class="btn-text">{{ pageAudioAction }}</span>
-        </button>
-        <button class="sidebar-btn" :class="{ active: deviceStore.showGlobalConsole && deviceStore.consoleDeviceId === currentId }" @click="toggleConsole" title="控制台">
-          <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-          <span class="btn-text">终端</span>
-        </button>
-        <button class="sidebar-btn" @click="takeScreenshot" title="截图">
-          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="12" cy="12" r="4"></circle></svg>
-          <span class="btn-text">截图</span>
-        </button>
-        <button class="sidebar-btn" @click="keymapStore.setEditMode(true)" title="按键映射">
-          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-          <span class="btn-text">映射</span>
-        </button>
-        <button class="sidebar-btn" @click="keymapStore.toggleKeyHints()" :title="keymapStore.showKeyHints ? '隐藏按键提示' : '显示按键提示'">
-          <svg v-if="keymapStore.showKeyHints" class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-          <svg v-else class="icon" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-          <span class="btn-text">提示</span>
-        </button>
-        <button class="sidebar-btn" @click="sendClipboardToDevice" title="发送剪切板到设备">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-          <span class="btn-text">送剪贴板</span>
-        </button>
-        <button class="sidebar-btn" @click="getClipboardFromDevice" title="获取设备剪切板到本地">
-          <svg class="icon" viewBox="0 0 24 24">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            <path d="M12 11v6M9 14l3 3 3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
-          </svg>
-          <span class="btn-text">收剪贴板</span>
-        </button>
-      </div>
-      
-      <div class="sidebar-divider"></div>
-      
-      <div class="sidebar-group custom-group">
+        </button></section>      <div class="sidebar-group custom-group" role="group" aria-label="自定义按键">
+        <h3 class="sidebar-group-title">自定义</h3>
         <div v-for="(btn, idx) in customButtons" :key="idx" class="sidebar-btn-wrapper">
           <button class="sidebar-btn custom-btn" @click="quickKey(btn.cmd)" :title="btn.cmd">
             <svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
@@ -431,28 +424,17 @@
           <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           <span class="btn-text">添加</span>
         </button>
-      </div>
-      
-      <div style="flex: 1"></div>
-      
-      <button class="sidebar-btn danger" @click="quitAgent" title="退出 Agent">
-        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
-        <span class="btn-text">退出</span>
-      </button>
-
-      <button class="sidebar-btn" @click="showSettingsModal = true" title="连接设置">
+      </div></div><div class="sidebar-footer"><button class="sidebar-btn" @click="showSettingsModal = true" title="连接设置">
         <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         <span class="btn-text">设置</span>
-      </button>
-
-      <!-- 底部微小 Agent 版本号展示 -->
-      <div class="sidebar-agent-version" :title="'Agent 完整版本号: ' + agentVersion">
+      </button><details class="sidebar-more"><summary title="更多设备操作">更多操作</summary><button class="sidebar-btn danger" @click="quitAgent" title="停止设备服务">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+        <span class="btn-text">停止设备服务</span>
+      </button></details><div class="sidebar-agent-version" :title="'Agent 完整版本号: ' + agentVersion">
         {{ agentVersion.split('-')[0] }}
-      </div>
-    </div>
+      </div></div></aside>
 
-    <!-- PC 右侧监控专属控制栏 (摄像头监控模式) -->
-    <div v-if="!isMobile && !isMini && isCameraMode" class="camera-sidebar">
+    <div v-if="!cameraCompact && !isMini && isCameraMode" class="camera-sidebar">
       <div class="camera-sidebar-title">
         <svg viewBox="0 0 24 24" class="sidebar-title-icon" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -599,13 +581,9 @@
       </div>
     </div>
 
-    <div v-if="showClipboardText" class="clipboard-overlay" @click.self="showClipboardText = false">
-      <section class="clipboard-dialog">
-        <h3>设备剪贴板</h3>
-        <textarea :value="clipboardText" readonly @focus="$event.target.select()"></textarea>
-        <div><button @click="copyDeviceClipboard">复制</button><button @click="showClipboardText = false">关闭</button></div>
-      </section>
-    </div>
+    <Teleport :to="clipboardDialogTarget">
+      <ClipboardPanel v-if="showClipboardText" :device-id="currentId" :mode="clipboardMode" :text="clipboardText" :message="clipboardMessage" :error="clipboardError" :busy="clipboardReadRequested" :auto-sync="clipboardAutoSync" :sync-status="clipboardLinkStatus" @sync-now="syncClipboardNow" @update:text="updateClipboardDraft" @close="closeClipboardPanel" @change-mode="openClipboardPanel" @read-local="readLocalClipboard" @read-device="requestDeviceClipboard" @send="sendClipboardDraft" @copy="copyDeviceClipboard" @update:auto-sync="setClipboardAutoSync" />
+    </Teleport>
     <!-- 截图预览弹窗 -->
     <ScreenshotModal 
       v-if="showScreenshot" 
@@ -632,7 +610,11 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue'
+import ClipboardPanel from '@/components/ClipboardPanel.vue'
+import { createClipboardLink, createClipboardLinkState, copiedEventText } from '@/utils/clipboardLink'
+import { clipboardTextError, shouldRouteRemotePaste, readBrowserClipboard, copyBrowserText } from '@/utils/clipboard'
+import { cameraFrameLayout } from '@/utils/cameraLayout'
+import { ref, shallowRef, reactive, toRef, computed, onMounted, onUnmounted, watch } from 'vue'
 import { debugLog, debugWarn } from '@/utils/debug'
 import { useDeviceStore } from '@/stores/devices'
 import { useWebRTC } from '@/composables/useWebRTC'
@@ -644,12 +626,16 @@ import { KeymapEngine } from '@/utils/keymapEngine'
 import { getDeviceSettings, saveDeviceSettings, hasCustomSettings, deleteDeviceSettings, applyPolicyToSettings, policyLockedSections, getCameraPreferences, saveCameraPreferences, buildStreamOptions } from '@/utils/settings'
 import { useAuthStore } from '@/stores/auth'
 import { useGroupControlStore } from '@/stores/groupControl'
+import ScreenPowerButton from '@/components/ScreenPowerButton.vue'
+import UnlockDeviceButton from '@/components/UnlockDeviceButton.vue'
 import ConnectionStatus from '@/components/ConnectionStatus.vue'
 import ScreenshotModal from '@/components/ScreenshotModal.vue'
 import SettingsModal from '@/components/SettingsModal.vue'
 import KeymapEditor from '@/components/KeymapEditor.vue'
 
 const props = defineProps({
+  headerTarget: { default: null },
+  uiSession: { default: null },
   deviceId: {
     type: String,
     default: null
@@ -669,6 +655,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['recommend-layout', 'close'])
+const uiSession = props.uiSession || reactive({ clipboardText: '', clipboardOpen: false, clipboardMode: 'send', clipboardMessage: '', clipboardError: false, mobileMenu: false, webFullscreen: false })
 
 const deviceStore = useDeviceStore()
 const currentId = computed(() => props.deviceId)
@@ -772,19 +759,114 @@ const canvasElement = ref(null)
 const hiddenInput = ref(null)
 const containerRef = ref(null)
 const isFullscreen = ref(false)
-const isWebFullscreen = ref(false)
+const isWebFullscreen = toRef(uiSession, 'webFullscreen')
 const CLIPBOARD_SOURCE_LOCAL = 'local'
 const CLIPBOARD_SOURCE_DEVICE = 'device'
 const CLIPBOARD_SOURCE_KEYBOARD = 'keyboard'
 const CLIPBOARD_ECHO_TTL_MS = 5000
-let lastLocalClipboardText = ''
-let lastDeviceClipboardText = ''
 const pendingClipboardWrites = []
 const showScreenshot = ref(false)
 const screenshotData = ref(null)
-const clipboardText = ref('')
-const showClipboardText = ref(false)
-let clipboardReadRequested = false
+const clipboardText = toRef(uiSession, 'clipboardText')
+const showClipboardText = toRef(uiSession, 'clipboardOpen')
+const clipboardReadRequested = ref(false)
+const clipboardMode = toRef(uiSession, 'clipboardMode')
+const clipboardMessage = toRef(uiSession, 'clipboardMessage')
+const clipboardError = toRef(uiSession, 'clipboardError')
+const clipboardAutoSync = ref(localStorage.getItem('phone_clipboard_auto_sync_' + currentId.value) !== 'false')
+if(!uiSession.clipboardLink)uiSession.clipboardLink=createClipboardLinkState()
+const clipboardLinkState=uiSession.clipboardLink
+const clipboardLinkStatus=computed(()=>!clipboardAutoSync.value?'联动已关闭':clipboardLinkState.message||'双向联动已开启')
+let clipboardReadPermission='unknown',clipboardPermissionHandle=null,clipboardPollTimer=null,clipboardLinkMounted=false
+let clipboardShortcutRequested=false,clipboardShortcutTimer=null,clipboardShortcutFollowup=null
+const clipboardLink=createClipboardLink({
+  state:clipboardLinkState,
+  active:()=>clipboardAutoSync.value&&effectiveFocused.value&&!isCameraMode.value&&!document.hidden&&document.hasFocus(),
+  readLocal:readBrowserClipboard,
+  writeLocal:async text=>{if(!navigator.clipboard?.writeText)throw Error('Clipboard write unavailable');await navigator.clipboard.writeText(text)},
+  sendRemote:text=>setDeviceClipboard(text,{paste:false,source:CLIPBOARD_SOURCE_LOCAL})
+})
+watch(effectiveFocused,focused=>{
+  if(focused)onWindowFocus()
+  else {clipboardLink.dismissPending();clipboardLinkState.local=null;clipboardLinkState.remote=null}
+})
+async function configureClipboardAccess(){
+  try{
+    const permission=await navigator.permissions?.query({name:'clipboard-read'})
+    if(!clipboardLinkMounted||!permission)return
+    clipboardPermissionHandle=permission
+    const update=()=>{clipboardReadPermission=permission.state;if(permission.state==='granted')onWindowFocus();else if(clipboardAutoSync.value&&!clipboardLinkState.pending){clipboardLinkState.blocked='read';clipboardLinkState.message='点击“同步”允许剪贴板访问，或直接 Ctrl+V 粘贴'}}
+    permission.onchange=update;update()
+  }catch{if(clipboardLinkMounted){clipboardReadPermission='gesture';clipboardLinkState.message='此浏览器需要主动操作，可 Ctrl+V 粘贴或点击同步'}}
+}
+async function syncClipboardNow(){
+  if(clipboardLinkState.pending!==null)return copyPendingClipboard()
+  if(!clipboardAutoSync.value){openClipboardPanel('send');return readLocalClipboard()}
+  await clipboardLink.captureLocal({explicit:true})
+}
+async function copyPendingClipboard(){
+  const text=clipboardLinkState.pending
+  if(text===null)return
+  try{
+    if(!navigator.clipboard?.writeText)throw Error('Clipboard write unavailable')
+    await navigator.clipboard.writeText(text)
+    // Preserve a newer phone copy that arrived while this write was pending.
+    if(clipboardLinkState.pending===text){clipboardLink.noteLocal(text);windowNotice('已同步手机文字到本机')}
+  }catch{
+    clipboardLinkState.blocked='write'
+    clipboardLinkState.message='复制受浏览器限制，请在剪贴板面板中手动复制'
+    openClipboardPanel('receive');clipboardText.value=text
+    clipboardReadRequested.value=false;clearTimeout(clipboardReadTimer)
+  }
+}
+function onLocalCopy(event){
+  if(!clipboardAutoSync.value||!effectiveFocused.value||isCameraMode.value)return
+  const text=copiedEventText(event,window.getSelection()?.toString()||'')
+  if(!text)return
+  setTimeout(()=>{if(!event.defaultPrevented)clipboardLink.sendLocal(text,true)},0)
+}
+function clipboardVisibilityChanged(){if(!document.hidden)onWindowFocus()}
+function requestRemoteCopy(){
+  clipboardShortcutRequested=true
+  clearTimeout(clipboardShortcutTimer);clearTimeout(clipboardShortcutFollowup)
+  if(!webrtc.getClipboard({copy:true})){clipboardShortcutRequested=false;windowNotice('控制连接尚未就绪');return}
+  // COPY may produce no notification if the selected text was already copied.
+  clipboardShortcutFollowup=setTimeout(()=>webrtc.getClipboard(),180)
+  clipboardShortcutTimer=setTimeout(()=>{clipboardShortcutRequested=false;windowNotice('手机未返回复制内容，请先在手机中选中文字')},6000)
+}
+const clipboardDialogTarget = computed(() => isFullscreen.value ? getWindowHost() : document.body)
+let clipboardReadTimer = null
+let clipboardOperation = 0
+const windowActionMessage = ref('')
+let windowMessageTimer
+function windowNotice(message) { windowActionMessage.value=message;clearTimeout(windowMessageTimer);windowMessageTimer=setTimeout(()=>{windowActionMessage.value=''},4500) }
+function clipboardNotice(message,error=false) { clipboardMessage.value=message;clipboardError.value=error }
+function updateClipboardDraft(text) { clipboardOperation++;clipboardText.value=text;clipboardNotice('') }
+function setClipboardAutoSync(enabled) {
+  clipboardAutoSync.value=enabled
+  localStorage.setItem('phone_clipboard_auto_sync_'+currentId.value,String(enabled))
+  if(enabled)void syncClipboardNow()
+  else clipboardLink.dismissPending()
+}
+function closeClipboardPanel() { showClipboardText.value=false;clipboardText.value='';clipboardMessage.value='';clipboardReadRequested.value=false;clearTimeout(clipboardReadTimer);clipboardOperation++ }
+function openClipboardPanel(mode) { deviceStore.focusDevice(currentId.value);clipboardMode.value=mode;clipboardText.value='';clipboardNotice('');showClipboardText.value=true;clipboardOperation++;clipboardReadRequested.value=false;clearTimeout(clipboardReadTimer);if(mode==='receive')requestDeviceClipboard() }
+async function readLocalClipboard() {
+  const operation=++clipboardOperation
+  try { const text=await readBrowserClipboard();if(operation!==clipboardOperation||!showClipboardText.value)return;clipboardText.value=text;clipboardNotice(text?'已读取本机文字，可编辑后发送。':'本机剪贴板为空。') }
+  catch(e) { if(operation===clipboardOperation&&showClipboardText.value)clipboardNotice(e.message,true) }
+}
+function requestDeviceClipboard() {
+  clearTimeout(clipboardReadTimer);clipboardReadRequested.value=true;clipboardText.value='';clipboardNotice('')
+  if(!webrtc.getClipboard()){clipboardReadRequested.value=false;clipboardNotice('控制连接尚未就绪，请连接手机后重试。',true);return}
+  clipboardReadTimer=setTimeout(()=>{clipboardReadRequested.value=false;clipboardNotice('读取超时，请保持手机已解锁，再重新读取。',true)},6000)
+}
+function sendClipboardDraft(paste) {
+  const error=clipboardTextError(clipboardText.value)
+  if(error){clipboardNotice(error,true);return}
+  const sent=setDeviceClipboard(clipboardText.value,{paste,source:CLIPBOARD_SOURCE_LOCAL})
+  if(sent)clipboardLink.noteLocal(clipboardText.value)
+  clipboardNotice(sent?(paste?'已发送粘贴请求，请在手机输入框中确认。':'已发送剪贴板写入请求。'):'控制连接尚未就绪，文字已保留，可稍后重试。',!sent)
+}
 const showSettingsModal = ref(false)
 const cameraSupport = ref(false)
 
@@ -958,6 +1040,21 @@ function reconnectStream(msg = '正在切换参数并重新建连...') {
 let reconnectStreamTimer = null
 
 // PTZ 数字变焦与视口平移漫游
+const sidebarCompact = ref(localStorage.getItem('phone_control_sidebar_compact') === 'true')
+function toggleSidebarCompact() {
+  sidebarCompact.value = !sidebarCompact.value
+  localStorage.setItem('phone_control_sidebar_compact', String(sidebarCompact.value))
+}
+
+const cameraPanel = ref(null)
+const cameraQuickbar = ref(null)
+const cameraBarHeight = ref(128)
+const cameraCompact = ref(true)
+const mediaStage = ref(null)
+const cameraViewport = ref({ width: 0, height: 0 })
+const cameraFit = ref('contain')
+const cameraHasFrame = ref(false)
+let cameraResizeObserver = null
 const cameraZoom = ref(1.0)
 const cameraPanX = ref(0)
 const cameraPanY = ref(0)
@@ -971,8 +1068,11 @@ const videoStreamStyle = computed(() => {
   if (!isCameraMode.value) {
     return {}
   }
+  const size = cameraFrameLayout(videoNaturalSize.value, cameraViewport.value, cameraRotation.value, cameraFit.value)
   return {
-    transform: `rotate(${cameraRotation.value}deg) scaleX(${cameraMirrored.value ? -1 : 1}) translate(${cameraPanX.value}px, ${cameraPanY.value}px) scale(${cameraZoom.value})`,
+    width: `${size.width}px`, height: `${size.height}px`,
+    position: 'absolute', left: '50%', top: '50%', objectFit: 'contain',
+    transform: `translate(-50%, -50%) rotate(${cameraRotation.value}deg) scaleX(${cameraMirrored.value ? -1 : 1}) translate(${cameraPanX.value}px, ${cameraPanY.value}px) scale(${cameraZoom.value})`,
     transformOrigin: 'center center',
     transition: isCameraPanning.value ? 'none' : 'transform 0.15s ease-out',
     cursor: cameraZoom.value > 1.0 ? (isCameraPanning.value ? 'grabbing' : 'grab') : 'default'
@@ -995,6 +1095,7 @@ function onZoomSliderChange() {
 }
 
 function resetPTZ() {
+  cameraFit.value = 'contain'
   cameraZoom.value = 1.0
   cameraPanX.value = 0
   cameraPanY.value = 0
@@ -1052,9 +1153,10 @@ const isBatteryTempHigh = computed(() => {
 
 // 安防高清抓拍
 function takeCameraSnapshot() {
+  if (!cameraFrameReady.value) return
   const video = videoElement.value
   const canvas = canvasElement.value
-  const target = isWebCodecs.value ? canvas : video
+  const target = isCanvasRendering.value ? canvas : video
   if (!target) return
   const offscreen = document.createElement('canvas')
   const w = target.videoWidth || target.width || 1920
@@ -1095,6 +1197,7 @@ function toggleCameraRecording() {
 }
 
 function startRecording() {
+  if (!cameraFrameReady.value) return
   const stream = currentWebRTC.value?.stream?.value || videoElement.value?.srcObject || (canvasElement.value?.captureStream ? canvasElement.value.captureStream(30) : null)
   if (!stream) {
     alert('视频流尚未就绪，无法开始录像')
@@ -1206,7 +1309,7 @@ const toggleConsole = () => {
 }
 
 // 手机悬浮菜单状态及拖拽
-const showMobileMenu = ref(false)
+const showMobileMenu = toRef(uiSession, 'mobileMenu')
 const fabStyle = ref({ right: '24px', bottom: '24px' })
 const isFabOnLeft = ref(false)
 const isFabOnTop = ref(false)
@@ -1369,13 +1472,29 @@ function onGlobalKeyDown(e) {
 
   debugLog('[GlobalKey] KeyDown. target:', e.target.tagName, 'activeElement:', document.activeElement ? document.activeElement.tagName : 'none', 'key:', e.key)
   
+  if (showClipboardText.value) return
+
   // 拦截 Esc 键快速退出页面全屏
   if (e.key === 'Escape' || e.key === 'Esc') {
+    if (isFullscreen.value) {
+      document.exitFullscreen().catch(()=>{})
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
     if (isWebFullscreen.value) {
       toggleWebFullscreen()
       e.preventDefault()
       e.stopPropagation()
       return
+    }
+  }
+
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'&&!keymapStore.isEditMode&&!isCameraMode.value&&!document.querySelector('.dialog,.modal,.modal-overlay,.settings-modal')){
+    const target=e.target
+    const localInput=target.closest?.('input,textarea,[contenteditable="true"]')&&!target.classList?.contains('hidden-keyboard-input')
+    if(!localInput&&!window.getSelection()?.toString()){
+      e.preventDefault();e.stopPropagation();requestRemoteCopy();return
     }
   }
 
@@ -1388,7 +1507,7 @@ function onGlobalKeyDown(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
   if (!videoNaturalSize.value.width) return;
 
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+  if ((e.ctrlKey || e.metaKey) && ['v','c'].includes(e.key.toLowerCase())) {
     return
   }
 
@@ -1398,18 +1517,13 @@ function onGlobalKeyDown(e) {
 }
 
 function onGlobalPaste(e) {
-  // 多机直连隔离：非焦点设备不处理全局粘贴
-  if (!effectiveFocused.value) return
-
-  if (keymapStore.isEditMode) return
-  const tag = e.target.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return
-  if (!videoNaturalSize.value.width) return
-  const text = e.clipboardData?.getData('text')
-  if (!text) return
+  if (!shouldRouteRemotePaste(e,{focused:effectiveFocused.value,editing:keymapStore.isEditMode,modalOpen:showClipboardText.value||showSettingsModal.value||Boolean(document.querySelector('.modal-overlay,.dialog,.modal')),camera:isCameraMode.value})) return
+  const text=e.clipboardData.getData('text/plain')||e.clipboardData.getData('text')
   e.preventDefault()
-  setDeviceClipboard(text, { paste: true, source: CLIPBOARD_SOURCE_LOCAL })
-  debugLog('[Clipboard] Global paste routed to device')
+  const error=clipboardTextError(text)
+  if(error||!setDeviceClipboard(text,{paste:true,source:CLIPBOARD_SOURCE_LOCAL})) {
+    openClipboardPanel('send');clipboardText.value=text;clipboardNotice(error||'连接尚未就绪，文字已保留，请稍后重试。',true)
+  } else {clipboardLink.noteLocal(text);windowNotice('已发送粘贴请求')}
 }
 
 function prunePendingClipboardWrites() {
@@ -1439,13 +1553,10 @@ function consumeClipboardWrite(text) {
 }
 
 function setDeviceClipboard(text, { paste = false, source = CLIPBOARD_SOURCE_LOCAL, suppressBroadcast = false } = {}) {
-  if (!text) return false
+  if (clipboardTextError(text)) return false
   const ok = webrtc.setClipboard(text, { paste, source, suppressBroadcast })
   if (ok) {
     rememberClipboardWrite(text, source, suppressBroadcast)
-    if (source === CLIPBOARD_SOURCE_LOCAL) {
-      lastLocalClipboardText = text
-    }
   }
   return ok
 }
@@ -1583,8 +1694,12 @@ function updateMobileState() {
   isMobile.value = window.innerWidth <= 1024
 }
 
-function onVideoLoaded() { checkAndRecommendLayout() }
-function onVideoResize() { checkAndRecommendLayout() }
+function onVideoLoaded() {
+  const video = videoElement.value
+  if (video?.videoWidth) videoNaturalSize.value = { width: video.videoWidth, height: video.videoHeight }
+  checkAndRecommendLayout()
+}
+function onVideoResize() { onVideoLoaded() }
 
 // 响应式重新连接
 watch(currentId, (newId) => {
@@ -1612,7 +1727,30 @@ watch(currentId, (newId) => {
 // 连接模式变化的重连由 MultiDeviceItem 的 :key="deviceId_mode" 重挂载统一承担，
 // 此处不要再 watch 模式做原地重连（与 key 重挂载叠加会双重断连）。
 
+let fallbackTimer = null
+watch(() => currentWebRTC.value?.status?.value, state => {
+  clearTimeout(fallbackTimer)
+  if (isWebSocketMode.value || isCameraMode.value || state === 'disconnected') return
+  if (state === 'connected') {
+    fallbackTimer = setTimeout(() => {
+      const videoReady = videoElement.value?.videoWidth > 0
+      const canvasReady = canvasElement.value?.width > 300 && canvasElement.value?.height > 300
+      if (!isWebSocketMode.value && !videoReady && !canvasReady) deviceStore.setDeviceMode(currentId.value, 'websocket')
+    }, 8000)
+    return
+  }
+  if (['connecting', 'reconnecting', 'signaling', 'waiting_offer', 'connecting_webrtc', 'error', 'failed'].includes(state)) {
+    fallbackTimer = setTimeout(() => {
+      if (!isWebSocketMode.value && currentWebRTC.value?.status?.value !== 'connected') {
+        deviceStore.setDeviceMode(currentId.value, 'websocket')
+      }
+    }, state === 'failed' || state === 'error' ? 1500 : 10000)
+  }
+}, { immediate: true })
+onUnmounted(() => clearTimeout(fallbackTimer))
+
 function setupWebRTC() {
+  cameraHasFrame.value = false
   bindWebRTCEvents(currentWebRTC.value)
   if (stopAgentVersionWatch) {
     stopAgentVersionWatch()
@@ -1636,6 +1774,7 @@ function setupWebRTC() {
   webrtc.setCanvasGetter(() => canvasElement.value)
   if (webrtc && webrtc.onFrameSize) {
     webrtc.onFrameSize((w, h) => {
+      cameraHasFrame.value = true
       videoNaturalSize.value = { width: w, height: h }
       checkAndRecommendLayout()
     })
@@ -1653,43 +1792,24 @@ function setupWebRTC() {
 
   // 设置剪切板回调
   webrtc.onClipboard((event) => {
-    // 多机直连隔离：非焦点设备剪切板变动不冲刷覆盖宿主机本地剪切板
-    if (!effectiveFocused.value) return
-
-    const text = event?.text || ''
-    if (clipboardReadRequested) {
-      clipboardReadRequested = false
+    const text = typeof event?.text === 'string' ? event.text : ''
+    if (clipboardReadRequested.value) {
+      clearTimeout(clipboardReadTimer)
+      clipboardReadRequested.value = false
       clipboardText.value = text
-      showClipboardText.value = true
-    }
-    if (!text) {
+      clipboardNotice(text?'已读取手机文字，点击“复制到本机”完成复制。':'手机剪贴板为空，请先在手机中复制文字。')
       return
     }
-    const source = event.source || CLIPBOARD_SOURCE_DEVICE
-    const echo = consumeClipboardWrite(text)
-    if (source === CLIPBOARD_SOURCE_KEYBOARD || echo?.suppressBroadcast) {
-      debugLog('[Clipboard] Ignored keyboard/temporary clipboard echo')
+    if(clipboardShortcutRequested){
+      clipboardShortcutRequested=false;clearTimeout(clipboardShortcutTimer)
+      if(text){clipboardLinkState.pending=text;void copyPendingClipboard()}
+      else windowNotice('手机剪贴板为空，请先选中文字')
       return
     }
-    if (echo) {
-      lastDeviceClipboardText = text
-      debugLog('[Clipboard] Ignored local clipboard echo from device')
-      return
-    }
-    if (text === lastDeviceClipboardText) {
-      return
-    }
-    lastDeviceClipboardText = text
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        lastLocalClipboardText = text
-        debugLog('[Clipboard] Auto synced from device')
-      }).catch(err => {
-        debugWarn('[Clipboard] Failed to auto sync to local:', err)
-      })
-    } else {
-      debugWarn('[Clipboard] Browser writeText API is unavailable')
-    }
+    if(!effectiveFocused.value||!clipboardAutoSync.value||isCameraMode.value||!text)return
+    const echo=consumeClipboardWrite(text)
+    if(event.source===CLIPBOARD_SOURCE_KEYBOARD||echo)return
+    clipboardLink.receiveRemote(text)
   })
 
   // 启动视频流统计轮询
@@ -1709,20 +1829,9 @@ const handlePopState = (e) => {
 }
 
 function onWindowFocus() {
-  if (isComposingText.value) return
-  // 多机直连隔离：仅当前聚焦的直控视口响应切屏剪切板自动同步
-  if (!effectiveFocused.value) return
-
-  if (navigator.clipboard && navigator.clipboard.readText) {
-    navigator.clipboard.readText().then(text => {
-      if (text && text !== lastLocalClipboardText) {
-        setDeviceClipboard(text, { paste: false, source: CLIPBOARD_SOURCE_LOCAL })
-        debugLog('[Clipboard] Auto synced local clipboard to device')
-      }
-    }).catch(() => {
-      // 静默失败，不打扰用户
-    })
-  }
+  if(!clipboardAutoSync.value||!effectiveFocused.value||isCameraMode.value||showClipboardText.value||isComposingText.value)return
+  if(clipboardLinkState.pending!==null)void clipboardLink.flushRemote()
+  else if(clipboardReadPermission==='granted')void clipboardLink.captureLocal()
 }
 
 function handleSettingsUpdated(event) {
@@ -1755,12 +1864,26 @@ onMounted(() => {
   window.addEventListener('popstate', handlePopState)
   window.addEventListener('cloudphone-settings-updated', handleSettingsUpdated)
   
+  if (mediaStage.value) {
+    cameraResizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === mediaStage.value) cameraViewport.value = { width: entry.contentRect.width, height: entry.contentRect.height }
+        if (entry.target === cameraPanel.value) cameraCompact.value = entry.contentRect.width < 740
+        if (entry.target === cameraQuickbar.value) cameraBarHeight.value = entry.borderBoxSize?.[0]?.blockSize || entry.target.getBoundingClientRect().height
+      }
+    })
+    cameraResizeObserver.observe(mediaStage.value)
+    if (cameraPanel.value) cameraResizeObserver.observe(cameraPanel.value)
+    if (cameraQuickbar.value) cameraResizeObserver.observe(cameraQuickbar.value)
+  }
   setupWebRTC()
   runDemoLoop()
   updateCameraClock()
   cameraClockTimer = setInterval(updateCameraClock, 1000)
 
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  handleFullscreenChange()
+  if (isWebFullscreen.value) onFsUiActivity()
   document.addEventListener('keydown', onGlobalKeyDown)
   document.addEventListener('keyup', onGlobalKeyUp)
   document.addEventListener('paste', onGlobalPaste)
@@ -1769,19 +1892,45 @@ onMounted(() => {
   nowTickTimer = setInterval(() => { nowTick.value = Date.now() }, 30000)
   window.addEventListener('resize', updateMobileState)
   window.addEventListener('focus', onWindowFocus)
+  document.addEventListener('copy',onLocalCopy)
+  document.addEventListener('cut',onLocalCopy)
+  document.addEventListener('visibilitychange',clipboardVisibilityChanged)
+  clipboardLinkMounted=true
+  void configureClipboardAccess()
+  clipboardPollTimer=setInterval(()=>{
+    if(clipboardReadPermission==='granted'&&!showClipboardText.value&&!isComposingText.value)void clipboardLink.captureLocal()
+  },800)
 })
 
 function handleFullscreenChange() {
-  isFullscreen.value = !!document.fullscreenElement
+  isFullscreen.value = Boolean(document.fullscreenElement && document.fullscreenElement === getWindowHost())
+  if (!isFullscreen.value) { try { screen.orientation?.unlock() } catch {} }
   if (isFullscreen.value) {
     if (isWebFullscreen.value) {
-      document.body.classList.remove('web-fullscreen')
-      isWebFullscreen.value = false
+      setWebFullscreen(false)
     }
   }
 }
 
 onUnmounted(() => {
+  clipboardLinkMounted=false
+  clearInterval(clipboardPollTimer)
+  clearTimeout(clipboardShortcutTimer);clearTimeout(clipboardShortcutFollowup)
+  if(clipboardPermissionHandle)clipboardPermissionHandle.onchange=null
+  document.removeEventListener('copy',onLocalCopy)
+  document.removeEventListener('cut',onLocalCopy)
+  document.removeEventListener('visibilitychange',clipboardVisibilityChanged)
+  clipboardLink.dispose()
+  const retainingUI = props.uiSession && !props.uiSession.disposing
+  if (retainingUI) {
+    clearTimeout(clipboardReadTimer)
+    clipboardOperation++
+    clipboardReadRequested.value = false
+    if (showClipboardText.value) clipboardNotice(clipboardMode.value === 'send' ? '连接正在切换，已保留输入文字。' : '连接正在切换，请重新读取手机剪贴板。')
+  } else closeClipboardPanel()
+  clearTimeout(windowMessageTimer)
+  if (!retainingUI) setWebFullscreen(false)
+  cameraResizeObserver?.disconnect()
   if (cameraClockTimer) clearInterval(cameraClockTimer)
   if (fsUiHideTimer) { clearTimeout(fsUiHideTimer); fsUiHideTimer = null }
   if (recordingTimer) clearInterval(recordingTimer)
@@ -1805,10 +1954,8 @@ onUnmounted(() => {
     pipWindow.close()
     pipWindow = null
   }
-  // Remove web-fullscreen class
-  document.body.classList.remove('web-fullscreen')
-  document.body.classList.remove('has-web-fullscreen')
-  isWebFullscreen.value = false
+  if(document.pictureInPictureElement && (document.pictureInPictureElement===videoElement.value||document.pictureInPictureElement===pipCaptureVideo))document.exitPictureInPicture().catch(()=>{})
+  cleanupPiP()
   window.removeEventListener('popstate', handlePopState)
   window.removeEventListener('cloudphone-settings-updated', handleSettingsUpdated)
   // 注意：卸载时不要重置连接模式（setDeviceMode 'display'）——
@@ -1816,7 +1963,7 @@ onUnmounted(() => {
   // 模式的清理由 store 的 closeDevice/closeAllDevices 负责。
   webrtc.disconnect()
   if (currentId.value) {
-    deviceStore.unregisterWebRTC(currentId.value)
+    deviceStore.unregisterWebRTC(currentId.value, webrtc)
   }
   if (reconnectStreamTimer) {
     clearTimeout(reconnectStreamTimer)
@@ -1834,46 +1981,17 @@ onUnmounted(() => {
   window.removeEventListener('focus', onWindowFocus)
 })
 
-function sendClipboardToDevice() {
-  if (navigator.clipboard && navigator.clipboard.readText) {
-    navigator.clipboard.readText().then(text => {
-      if (text) {
-        const ok = setDeviceClipboard(text, { paste: true, source: CLIPBOARD_SOURCE_LOCAL })
-        if (ok) debugLog('[Clipboard] Sent to device')
-      } else {
-        alert('本地剪切板为空')
-      }
-    }).catch(err => {
-      const text = prompt('请输入要发送到设备的剪切板内容：', lastLocalClipboardText)
-      if (text) {
-        setDeviceClipboard(text, { paste: true, source: CLIPBOARD_SOURCE_LOCAL })
-      }
-    })
-  } else {
-    const text = prompt('请输入要发送到设备的剪切板内容：', lastLocalClipboardText)
-    if (text) {
-      setDeviceClipboard(text, { paste: true, source: CLIPBOARD_SOURCE_LOCAL })
-    }
-  }
-}
-
-function getClipboardFromDevice() {
-  clipboardReadRequested = true
-  const ok = webrtc.getClipboard()
-  if (ok) {
-    debugLog('[Clipboard] Requested clipboard from device')
-  } else {
-    clipboardReadRequested = false
-    debugWarn('[Clipboard] Failed to request clipboard from device')
-  }
-}
+function sendClipboardToDevice() { openClipboardPanel('send');readLocalClipboard() }
+function getClipboardFromDevice() { openClipboardPanel('receive') }
 
 const statusText = computed(() => {
   const map = {
     'connected': '已连接',
     'connecting': '连接中',
     'reconnecting': '重连中',
-    'signaling': '信令中',
+    'signaling': '协商中',
+    'waiting_offer': '等待设备',
+    'connecting_webrtc': '连接画面中',
     'disconnected': '断开',
     'error': '错误'
   }
@@ -1910,13 +2028,15 @@ const connMetaText = computed(() => {
   return `👤 ${name} · 剩余 ${formatDuration(ms)}`
 })
 
-const showOverlay = computed(() => currentWebRTC.value.status.value !== 'connected')
+const showOverlay = computed(() => currentWebRTC.value.status.value !== 'connected' || (isCameraMode.value && !cameraFrameReady.value))
 
 // 是否需要旋转坐标（手机端且视频横屏）
 const needRotateCoords = computed(() => isMobile.value && isVideoLandscape.value)
 
 // 存储视频实际尺寸用于坐标转换
 const videoNaturalSize = ref({ width: 0, height: 0 })
+const cameraFrameReady = computed(() => currentWebRTC.value?.status?.value === 'connected' && (isCanvasRendering.value ? Boolean(currentWebRTC.value?.isFirstFrameRendered?.value || cameraHasFrame.value) : cameraHasFrame.value))
+const cameraActualResolution = computed(() => cameraFrameReady.value && videoNaturalSize.value.width ? `${videoNaturalSize.value.width} × ${videoNaturalSize.value.height}` : `${currentResText.value} · 等待画面`)
 
 function checkAndRecommendLayout() {
   const activeMedia = (isCanvasRendering.value && canvasElement.value) ? canvasElement.value : videoElement.value
@@ -1984,24 +2104,22 @@ function retry() {
 // 此时"全屏"按钮自动退化为 CSS 页面全屏
 const nativeFullscreenSupported = ref(!!document.fullscreenEnabled)
 
+function getWindowHost() { return props.headerTarget?.closest('.multi-device-item,.floating-window') || cameraPanel.value }
+function setWebFullscreen(enabled) {
+  isWebFullscreen.value=enabled
+  const host=getWindowHost()
+  if(host) { if(enabled)host.dataset.webFullscreen='true';else delete host.dataset.webFullscreen }
+  document.body.classList.toggle('has-web-fullscreen',Boolean(document.querySelector('[data-web-fullscreen="true"]')))
+}
 function toggleFullscreen() {
-  if (!nativeFullscreenSupported.value) {
-    toggleWebFullscreen()
-    return
-  }
-  if (!document.fullscreenElement) {
-    // 如果处于网页全屏，先退出网页全屏，避免样式污染系统全屏元素
-    if (isWebFullscreen.value) {
-      document.body.classList.remove('web-fullscreen')
-      document.body.classList.remove('has-web-fullscreen')
-      isWebFullscreen.value = false
-    }
-    containerRef.value?.requestFullscreen().catch(() => {
-      toggleWebFullscreen()
-    })
-  } else {
-    document.exitFullscreen().catch(() => {})
-  }
+  const host=getWindowHost()
+  if(!nativeFullscreenSupported.value||!host?.requestFullscreen){toggleWebFullscreen();return}
+  if(document.fullscreenElement===host){document.exitFullscreen().catch(()=>{});return}
+  setWebFullscreen(false)
+  // Preserve device orientation; fullscreen never requests an orientation lock.
+  const request=()=>host.requestFullscreen().catch(()=>toggleWebFullscreen())
+  if(document.fullscreenElement)document.exitFullscreen().then(request).catch(()=>{})
+  else request()
 }
 
 function exitFullscreenFromFab() {
@@ -2031,118 +2149,64 @@ function onFsUiActivity() {
 }
 
 function toggleWebFullscreen() {
-  if (!isWebFullscreen.value) {
-    // 如果处于系统全屏，先退出系统全屏
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {})
-    }
-    document.body.classList.add('has-web-fullscreen')
-    isWebFullscreen.value = true
-    onFsUiActivity()
-  } else {
-    document.body.classList.remove('has-web-fullscreen')
-    document.body.classList.remove('web-fullscreen')
-    isWebFullscreen.value = false
-    if (fsUiHideTimer) { clearTimeout(fsUiHideTimer); fsUiHideTimer = null }
-    fsUiVisible.value = true
-  }
+  if(isWebFullscreen.value){setWebFullscreen(false);return}
+  const enter=()=>{setWebFullscreen(true);onFsUiActivity()}
+  if(document.fullscreenElement)document.exitFullscreen().then(enter).catch(()=>windowNotice('无法退出系统全屏，请按 Esc 后重试'))
+  else enter()
 }
 
-const pictureInPictureSupported = computed(() => {
-  return !!('documentPictureInPicture' in window) || !!document.pictureInPictureEnabled
-})
+const pictureInPictureSupported = computed(() => Boolean(window.documentPictureInPicture?.requestWindow || document.pictureInPictureEnabled))
 const isPiP = ref(false)
 let pipWindow = null
-
-async function togglePictureInPicture() {
-  if (!videoElement.value) return
-
-  // If already in PiP, exit
-  if (isPiP.value) {
-    if (pipWindow) {
-      pipWindow.close()
-      // cleanup handled by pagehide listener
-    } else if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture()
-    }
-    isPiP.value = false
-    return
-  }
-
-  // Try Document PiP first (supports interaction)
-  if ('documentPictureInPicture' in window) {
-    try {
-      const video = videoElement.value
-      const vw = video.videoWidth || 480
-      const vh = video.videoHeight || 854
-      // Scale down to reasonable PiP size
-      const scale = Math.min(400 / vw, 700 / vh, 1)
-      const pipW = Math.round(vw * scale)
-      const pipH = Math.round(vh * scale)
-
-      pipWindow = await window.documentPictureInPicture.requestWindow({
-        width: pipW,
-        height: pipH,
-      })
-
-      // Copy stylesheets into PiP window
-      const styles = document.querySelectorAll('style, link[rel="stylesheet"]')
-      styles.forEach(s => {
-        pipWindow.document.head.appendChild(s.cloneNode(true))
-      })
-
-      // Add PiP-specific styles
-      const pipStyle = pipWindow.document.createElement('style')
-      pipStyle.textContent = `
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; overflow: hidden; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .pip-video-container { width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; object-fit: contain; display: block; }
-      `
-      pipWindow.document.head.appendChild(pipStyle)
-
-      // Create container and move video into PiP window
-      const container = pipWindow.document.createElement('div')
-      container.className = 'pip-video-container'
-      container.appendChild(video)
-      pipWindow.document.body.appendChild(container)
-
-      isPiP.value = true
-
-      // When PiP window closes, move video back
-      pipWindow.addEventListener('pagehide', () => {
-        const mainContainer = containerRef.value
-        if (mainContainer && video) {
-          // Re-insert video before the textarea (hidden-keyboard-input)
-          const textarea = mainContainer.querySelector('.hidden-keyboard-input')
-          if (textarea) {
-            mainContainer.insertBefore(video, textarea)
-          } else {
-            mainContainer.appendChild(video)
-          }
-        }
-        isPiP.value = false
-        pipWindow = null
-      })
-
-      return
-    } catch (err) {
-      console.warn('Document PiP failed, falling back to standard PiP:', err)
-      pipWindow = null
-    }
-  }
-
-  // Fallback: standard PiP (view-only, no interaction)
-  try {
-    await videoElement.value.requestPictureInPicture()
-    isPiP.value = true
-    videoElement.value.addEventListener('leavepictureinpicture', () => {
-      isPiP.value = false
-    }, { once: true })
-  } catch (err) {
-    console.error('PiP error:', err)
-  }
+let restorePiPMedia = null
+let pipCaptureVideo = null
+function cleanupPiP() {
+  restorePiPMedia?.();restorePiPMedia=null
+  if(pipCaptureVideo){pipCaptureVideo.srcObject?.getTracks().forEach(track=>track.stop());pipCaptureVideo.remove();pipCaptureVideo=null}
+  isPiP.value=false
 }
+async function togglePictureInPicture() {
+  if(isPiP.value){
+    if(pipWindow){pipWindow.close();pipWindow=null}
+    else if(document.pictureInPictureElement)await document.exitPictureInPicture().catch(()=>{})
+    cleanupPiP();return
+  }
+  const media=isCanvasRendering.value?canvasElement.value:videoElement.value
+  const width=media?.videoWidth||media?.width||0,height=media?.videoHeight||media?.height||0
+  if(!media||!width||!height||(!isCanvasRendering.value&&media.readyState<2)) {windowNotice('等待画面连接后再打开画中画');return}
+  if(window.documentPictureInPicture?.requestWindow){
+    try {
+      const scale=Math.min(400/width,700/height,1)
+      pipWindow=await window.documentPictureInPicture.requestWindow({width:Math.max(200,Math.round(width*scale)),height:Math.max(160,Math.round(height*scale))})
+      for(const style of document.querySelectorAll('style,link[rel="stylesheet"]'))pipWindow.document.head.appendChild(style.cloneNode(true))
+      const style=pipWindow.document.createElement('style')
+      style.textContent='html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}.pip-video-container{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}.pip-video-container>.video-stream{position:static!important;transform:none!important;width:100%!important;height:100%!important;max-width:100%;max-height:100%;object-fit:contain!important}'
+      pipWindow.document.head.appendChild(style)
+      const marker=document.createComment('picture-in-picture media position');media.before(marker)
+      restorePiPMedia=()=>{if(marker.parentNode){marker.replaceWith(media)}}
+      const container=pipWindow.document.createElement('div');container.className='pip-video-container';container.appendChild(media);pipWindow.document.body.appendChild(container)
+      pipWindow.document.addEventListener('paste',onGlobalPaste)
+      pipWindow.document.addEventListener('keydown',onGlobalKeyDown)
+      pipWindow.document.addEventListener('keyup',onGlobalKeyUp)
+      pipWindow.addEventListener('pagehide',()=>{cleanupPiP();pipWindow=null},{once:true})
+      isPiP.value=true;return
+    } catch {pipWindow?.close();pipWindow=null;cleanupPiP()}
+  }
+  try {
+    let video=videoElement.value
+    if(isCanvasRendering.value){
+      if(!media.captureStream)throw Error('Canvas PiP unavailable')
+      video=document.createElement('video');video.muted=true;video.playsInline=true
+      video.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none'
+      video.srcObject=media.captureStream(30);mediaStage.value?.appendChild(video);pipCaptureVideo=video
+      await video.play()
+    }
+    await video.requestPictureInPicture()
+    isPiP.value=true
+    video.addEventListener('leavepictureinpicture',cleanupPiP,{once:true})
+  } catch {cleanupPiP();windowNotice('浏览器未允许打开画中画，请使用页面全屏或在支持的浏览器中重试')}
+}
+watch(isCanvasRendering,()=>{if(isPiP.value){pipWindow?.close();if(document.pictureInPictureElement)document.exitPictureInPicture().catch(()=>{});cleanupPiP()}})
 
 
 function takeScreenshot() {
@@ -2160,13 +2224,9 @@ function quickKey(cmd) {
   }
 }
 
-async function copyDeviceClipboard() {
-  if (navigator.clipboard?.writeText) {
-    try { await navigator.clipboard.writeText(clipboardText.value); return } catch {}
-  }
-  const input = document.querySelector('.clipboard-dialog textarea')
-  input?.select()
-  document.execCommand('copy')
+async function copyDeviceClipboard(textarea) {
+  try { await copyBrowserText(clipboardText.value,textarea);clipboardLink.noteLocal(clipboardText.value);clipboardNotice('已复制到本机剪贴板。') }
+  catch(e) { clipboardNotice(e.message,true) }
 }
 
 function togglePageMute() {
@@ -2214,7 +2274,7 @@ function onKeyboardKeyDown(e) {
   if (keymapStore.isEditMode) return
   if (!videoNaturalSize.value.width) return
 
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+  if ((e.ctrlKey || e.metaKey) && ['v','c'].includes(e.key.toLowerCase())) {
     return
   }
 
@@ -2266,7 +2326,7 @@ function onCompositionStart(e) {
 
 function onCompositionEnd(e) {
   isComposingText.value = false
-  debugLog('[Keyboard] IME Composition ended. data:', e.data)
+  debugLog('[Keyboard] IME Composition ended')
   if (e.data) {
     webrtc.sendInjectText(e.data)
   }
@@ -2281,7 +2341,7 @@ function onKeyboardInput(e) {
     return
   }
   const text = e.target.value
-  debugLog('[Keyboard] Input event text (direct):', text)
+  debugLog('[Keyboard] Input received:', text.length, 'characters')
   if (text.length > 0) {
     webrtc.sendInjectText(text)
     // 立即清空输入框
@@ -2289,15 +2349,7 @@ function onKeyboardInput(e) {
   }
 }
 
-function onKeyboardPaste(e) {
-  if (keymapStore.isEditMode) return
-  if (!videoNaturalSize.value.width) return
-  const text = e.clipboardData?.getData('text')
-  if (!text) return
-  e.preventDefault()
-  setDeviceClipboard(text, { paste: true, source: CLIPBOARD_SOURCE_LOCAL })
-  debugLog('[Keyboard] paste event routed to device clipboard')
-}
+function onKeyboardPaste(e) { onGlobalPaste(e) }
 
 let mouseDown = false
 function onMouseDown(e) { 
@@ -2411,13 +2463,23 @@ function onTouchEnd(e) {
 </script>
 
 <style scoped>
+.clipboard-link-pending{position:absolute;z-index:170;bottom:14px;left:12px;max-width:calc(100% - 24px);display:flex;align-items:center;gap:8px;box-sizing:border-box;flex-wrap:wrap;padding:10px 12px;border:1px solid #417a96;border-radius:10px;background:#123249f5;color:#ceeaff;font-size:12px;box-shadow:0 5px 22px #0006}
+.clipboard-link-pending button{min-height:34px;padding:6px 10px;border:1px solid #538da9;border-radius:7px;background:#22526c;color:#fff;font:inherit;cursor:pointer}
+.clipboard-link-pending .dismiss{min-width:32px;border-color:transparent;background:transparent;font-size:18px}
+
+.client-window-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.window-action{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:7px;background:transparent;color:#a6bed2;cursor:pointer;touch-action:manipulation}
+.window-action .icon{width:17px;height:17px}
+.window-action:hover{background:#283d51;color:#edf7ff}
+.window-action.active{background:#173d51;color:#7ad9ff;border-color:#31718d}
+.window-action:focus-visible{outline:2px solid #6bcfff;outline-offset:1px}
+.inline-window-actions{position:absolute;right:8px;top:8px;z-index:110;background:#102033d9;border:1px solid #334b61;border-radius:9px;padding:3px}
+.window-action-message{position:absolute;z-index:160;top:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 12px;border-radius:9px;background:#14324aee;color:#cae9ff;box-shadow:0 4px 18px #0005;font-size:12px;pointer-events:none}
+@media(max-width:600px){.window-action{width:36px;height:36px}}
+
 .audio-error-notice { position: absolute; bottom: 48px; left: 12px; right: 12px; z-index: 12; padding: 8px 12px; border-radius: 6px; background: #30251ee8; color: #fbbf24; font-size: 12px; }
 .audio-error-notice button { margin-left: 10px; cursor: pointer; }
 
-.clipboard-overlay { position: fixed; inset: 0; z-index: 10000; background: #0008; display: grid; place-items: center; }
-.clipboard-dialog { width: min(540px, 90vw); padding: 20px; border-radius: 12px; background: var(--bg-surface, #222); }
-.clipboard-dialog textarea { width: 100%; min-height: 180px; margin: 12px 0; color: inherit; background: var(--bg-primary, #111); }
-.clipboard-dialog button { margin-right: 12px; padding: 8px 16px; cursor: pointer; }
 
 .hidden-keyboard-input {
   position: absolute;
@@ -2517,7 +2579,7 @@ function onTouchEnd(e) {
 /* 局部独立页面全屏 (Web Fullscreen)：根节点直接 fixed 提权铺满视口，
    跳出 MultiDeviceContainer/Grid/Tabs 等所有中间容器（max-width、padding、grid 轨道均不再约束画面）。
    z-index 9000：高于应用内所有布局层（面板 200/浮窗 1000/底部导航），低于全局弹窗/Toast (9999+)。 */
-.device-panel-view.is-web-fullscreen {
+.device-panel-view.is-web-fullscreen:not(.has-window-header) {
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;

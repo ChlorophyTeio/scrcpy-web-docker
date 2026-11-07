@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { defaultSettings, buildStreamOptions, getDeviceSettings, parseSettings, saveDeviceSettings, deleteDeviceSettings, hasCustomSettings, updateRemoteDeviceSettings, loadRemoteDeviceSettings } from './settings.js'
@@ -7,14 +8,16 @@ function storage() {
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) }
 }
 
-test('connection and preview defaults have separate wake policies and preserve zero limits', () => {
+test('balanced connection defaults keep preview wake independent and accept explicit zero limits', () => {
   const connection = buildStreamOptions(defaultSettings)
   const preview = buildStreamOptions(defaultSettings, { preview: true })
-  assert.equal(defaultSettings.showStats, false)
+  assert.equal(defaultSettings.showStats, true)
   assert.equal(connection.stay_awake, true)
   assert.equal(preview.stay_awake, false)
-  assert.equal(connection.max_fps, 0)
-  assert.equal(connection.max_size, 0)
+  assert.equal(connection.max_fps, 60)
+  assert.equal(connection.max_size, 1920)
+  assert.equal(buildStreamOptions({ fps: 0, size: 0 }).max_fps, 0)
+  assert.equal(buildStreamOptions({ fps: 0, size: 0 }).max_size, 0)
   assert.equal(preview.max_size, 360)
   assert.equal(buildStreamOptions({ previewSize: 0 }, { preview: true }).max_size, 0)
   assert.equal(parseSettings({ stayAwake: false }).connectionStayAwake, undefined)

@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 package controlplane
 
 import (
@@ -8,6 +9,22 @@ import (
 )
 
 func (s *Server) deviceByID(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/management") {
+		s.deviceManagement(w, r, strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/devices/"), "/management"))
+		return
+	}
+	if strings.HasSuffix(r.URL.Path, "/file-tools") {
+		s.deviceFileTools(w, r, strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/devices/"), "/file-tools"))
+		return
+	}
+	if strings.HasSuffix(r.URL.Path, "/screen-state") {
+		s.deviceScreenState(w, r, strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/devices/"), "/screen-state"))
+		return
+	}
+	if strings.HasSuffix(r.URL.Path, "/unlock") {
+		s.deviceUnlock(w, r, unlockDeviceID(r.URL.Path))
+		return
+	}
 	if strings.HasSuffix(r.URL.Path, "/settings") {
 		s.deviceSettings(w, r, strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/devices/"), "/settings"))
 		return

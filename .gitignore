@@ -12,3 +12,8 @@ coverage/
 *.log
 frontend/web-app/node_modules/
 frontend/web-app/assets/
+
+!**/.env*.example
+__pycache__/
+*.pyc
+.venv/

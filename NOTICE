@@ -47,3 +47,12 @@ records the actual package and dependency versions used by each image build.
 Builds collect remaining npm and Go module license/notice files without
 rewriting their contents. These are included in Release archives and images;
 frontend notices are also embedded at /THIRD_PARTY_LICENSES.txt.
+
+Optional-plugin / unified-container adaptation (2026):
+- Generic manifest discovery, health checks, scoped admin gateway and lazy Vue plugin views.
+- Independent MAA worker and task GUI additions, integrated host agent, bridge ICE settings,
+  USB discovery recovery, process/application/file tools and mobile console refinements.
+- Reproducible unified/MAA Dockerfiles, generic Unraid templates and manual release workflows.
+The upstream project names and license notices are retained. This fork is not an
+upstream MAA or ScrcpyCat release. Official MAA programs are independent subprocesses;
+their license texts and source links are recorded in plugins/maa/licenses.

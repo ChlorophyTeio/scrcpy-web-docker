@@ -1,0 +1,5 @@
+/* Fullscreen owns the card so window actions remain reachable above the video. */
+.multi-device-item[data-web-fullscreen="true"],.floating-window[data-web-fullscreen="true"]{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;z-index:9000!important;border-radius:0!important;margin:0!important;transform:none!important}
+.multi-device-item:fullscreen,.floating-window:fullscreen{width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;background:#08101b}
+.floating-window-tools{display:flex;align-items:center;flex-shrink:0}
+.floating-window[data-web-fullscreen="true"] .window-body,.floating-window:fullscreen .window-body{flex:1;min-height:0}

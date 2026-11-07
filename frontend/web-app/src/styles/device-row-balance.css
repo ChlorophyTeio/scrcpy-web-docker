@@ -1,0 +1,39 @@
+/* Row scale: 13px identity, 11px supporting text, 32px desktop controls. */
+.device-list-page div.device-table-container{--device-table-columns:24px 60px minmax(240px,1.6fr) 84px minmax(100px,1fr) 120px minmax(70px,.6fr) 212px}
+.device-list-page div.device-table-row{min-height:112px;padding:14px 12px!important;font-size:12px;line-height:1.45}
+.device-list-page .device-table-row .device-id-text{font-size:13px;line-height:20px;font-weight:600}
+.device-list-page .device-table-row .device-secondary,.device-list-page .device-table-row .model-text,.device-list-page .device-table-row .res-text{font-size:11px;line-height:16px}
+.device-list-page .device-table-row .col-thumb .thumb-box{width:40px;height:64px;border-radius:8px;box-shadow:none}
+.device-list-page .device-table-row .status-pill,.device-list-page .device-table-row .client-active-pill{box-sizing:border-box;min-height:26px;padding:4px 8px;border-radius:7px;font-size:11px;line-height:16px;font-weight:500}
+.device-list-page .device-table-row .status-dot{width:6px;height:6px;box-shadow:none}
+.device-list-page .device-table-row .client-idle{font-size:11px;line-height:16px;opacity:1;color:#829aad}
+.device-list-page .device-table-row .metric-name{font-size:11px;line-height:16px;font-weight:500;width:26px}
+.device-list-page .device-table-row .metric-num{font-size:11px;line-height:16px;width:32px;font-variant-numeric:tabular-nums}
+.device-list-page .device-table-row .metric-track{height:5px}
+.device-list-page .device-table-row .tag-badge{height:24px;font-size:11px;line-height:16px;padding:3px 6px;border-radius:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.device-list-page .device-table-row .quick-screen-controls{grid-template-columns:minmax(0,1.35fr) minmax(0,.9fr) minmax(0,1.2fr);max-width:300px;gap:6px;margin-top:8px;padding:0;border:0;background:transparent;border-radius:7px}
+.device-list-page .device-table-row .quick-screen-controls>button:is(.quick-screen-action,.screen-power-button,.unlock-device-button){display:flex;align-items:center;justify-content:center;grid-column:auto;box-sizing:border-box;height:32px;min-height:32px;min-width:0;padding:5px 7px;gap:5px;border-radius:7px;border:1px solid #334e63;background:#172b3c;color:#bdd0df;font-family:inherit;font-size:11px;font-weight:500;line-height:16px;white-space:nowrap}
+.device-list-page .device-table-row .quick-screen-controls>button.screen-power-button{color:#96dfc9;border-color:#3b665b;background:#16332f}
+.device-list-page .device-table-row .quick-screen-controls>button.screen-power-button.is-screen-off{color:#f1cc8d;border-color:#715a37;background:#352c20}
+.device-list-page .device-table-row .quick-screen-controls>button.unlock-device-button{color:#a8d6f4;border-color:#3a607c;background:#19354b}
+.device-list-page .device-table-row .quick-screen-controls button svg{width:14px;height:14px;flex:none}
+.device-list-page .device-table-row .col-actions{gap:5px}
+.device-list-page .device-table-row button.action-btn{height:32px;min-height:32px;min-width:32px;box-sizing:border-box;border-radius:7px;font-size:12px;line-height:16px;font-weight:500}
+.device-list-page .device-table-row button.primary-action{min-width:84px;padding:0 10px}
+.device-list-page .device-table-row button.icon-action{width:32px;padding:0}
+.device-list-page .device-table-row .icon-action svg{width:16px;height:16px}
+@container screen-shortcuts (max-width:270px){.device-list-page .device-table-row .quick-screen-controls button svg{display:none}}
+@container phone-list (max-width:1199px){.device-list-page div.device-table-container{--device-table-columns:20px 54px minmax(210px,1.5fr) 80px minmax(80px,1fr) minmax(60px,.5fr) 212px}}
+@container phone-list (max-width:999px){.device-list-page div.device-table-container{--device-table-columns:16px 50px minmax(200px,1.4fr) 76px minmax(70px,1fr) 212px}}
+@container phone-list (max-width:759px){.device-list-page div.device-table-container{--device-table-columns:10px 44px minmax(180px,1fr) 72px 176px}}
+@container phone-list (max-width:640px){
+ .device-list-page div.device-table-row{min-height:0;padding:14px!important;gap:5px 10px}
+ .device-list-page .device-table-row .device-id-text{font-size:14px;line-height:20px}
+ .device-list-page .device-table-row .col-thumb .thumb-box{width:42px;height:66px}
+ .device-list-page .device-table-row .status-pill,.device-list-page .device-table-row .client-active-pill{min-height:24px;padding:3px 7px;line-height:16px}
+ .device-list-page .device-table-row .quick-screen-controls{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr) minmax(0,1fr);max-width:none;margin-top:8px;gap:6px}
+ .device-list-page .device-table-row .quick-screen-controls>button:is(.quick-screen-action,.screen-power-button,.unlock-device-button){height:44px;min-height:44px;padding:7px 5px;font-size:12px;gap:4px}
+ .device-list-page .device-table-row button.action-btn{height:44px;min-height:44px;font-size:12px}
+ .device-list-page .device-table-row button.more-btn{width:auto;min-width:76px;padding:0 10px}
+}
+@media(pointer:coarse){.device-list-page .device-table-row button.action-btn,.device-list-page .device-table-row .quick-screen-controls>button:is(.quick-screen-action,.screen-power-button,.unlock-device-button){height:44px;min-height:44px}}

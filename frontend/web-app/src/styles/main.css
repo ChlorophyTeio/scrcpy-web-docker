@@ -1,3 +1,4 @@
+/* Modified for the optional-plugins distribution (2026). See NOTICE. */
 :root {
   --bg-primary: #0f0f1a;
   --bg-secondary: #1a1a2e;
@@ -97,8 +98,8 @@ body.web-fullscreen {
    .multi-device-item.is-focused (z-index:2) 和 .floating-window (内联 z-index) 会创建层叠上下文，
    把全屏层的 z-index:9000 囚禁在内，导致 multi-top-bar (z-index:10) 等兄弟层盖住全屏画面。
    全屏时将这些中间层的 z-index 置为 auto，让全屏层直接在面板级层叠上下文中胜出。 */
-body.has-web-fullscreen .multi-device-item,
-body.has-web-fullscreen .floating-window {
+body.has-web-fullscreen .multi-device-item:not([data-web-fullscreen="true"]),
+body.has-web-fullscreen .floating-window:not([data-web-fullscreen="true"]) {
   z-index: auto !important;
 }
 /* FAB buttons shared style */

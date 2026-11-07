@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import { ref } from 'vue'
 import { issueWebSocketTicket } from '@/utils/websocketTicket'
 
@@ -10,8 +11,10 @@ export function useDeviceFiles(deviceId) {
   let socket = null
   let callback = null
   let connectTimer = null
+  let generation=0
 
   function disconnect() {
+    generation++
     clearTimeout(connectTimer)
     const current = socket
     socket = null
@@ -28,23 +31,26 @@ export function useDeviceFiles(deviceId) {
 
   async function connect() {
 	  disconnect()
+    const attempt=generation
 	  error.value = null
 	  status.value = 'connecting'
 	  let ticket
 	  try {
 		  ticket = await issueWebSocketTicket()
 	  } catch (err) {
+      if(attempt!==generation)return
 		  error.value = err.message
 		  status.value = 'error'
 		  return
 	  }
+    if(attempt!==generation)return
 	  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
 	  const current = new WebSocket(`${protocol}//${location.host}/connect_client?ticket=${encodeURIComponent(ticket)}`)
     socket = current
     connectTimer = setTimeout(() => {
-      if (!fileChannelReady.value) { error.value = '文件通道连接超时'; current.close() }
+      if (socket===current&&!fileChannelReady.value) { error.value = '文件通道连接超时'; current.close() }
     }, 15000)
-    current.onopen = () => send({ message_type: 'connect' })
+    current.onopen = () => {if(socket===current)send({ message_type: 'connect' })}
     current.onmessage = event => {
       if (socket !== current || typeof event.data !== 'string') return
       let message
@@ -53,6 +59,7 @@ export function useDeviceFiles(deviceId) {
         send({ message_type: 'file_open' })
       } else if (message.message_type === 'file_message') {
         const payload = message.payload
+        if(!payload||typeof payload!=='object')return
         if (payload.type === 'ready') {
           clearTimeout(connectTimer)
           fileChannelReady.value = true
@@ -67,7 +74,7 @@ export function useDeviceFiles(deviceId) {
         current.close()
       }
     }
-    current.onerror = () => { error.value = '文件通道连接失败' }
+    current.onerror = () => { if(socket===current)error.value = '文件通道连接失败' }
     current.onclose = () => {
       if (socket !== current) return
       clearTimeout(connectTimer)

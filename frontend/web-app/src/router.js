@@ -1,3 +1,4 @@
+// Modified for the optional-plugins distribution (2026). See NOTICE.
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -29,9 +30,11 @@ const routes = [
       default: () => import('@/views/AdvancedPage.vue')
     }
   },
-  { path: '/files', component: () => import('@/views/FileManagerPage.vue') },
+  { path: '/files', component: () => import('@/views/PhoneManagerPage.vue') },
   { path: '/batch', component: () => import('@/views/BatchControlPage.vue') },
   { path: '/shares', component: () => import('@/views/ShareAdminPage.vue') },
+  {path:'/plugins/:pluginId',component:()=>import('@/views/PluginPage.vue')},
+  {path:'/maa-console',redirect:'/plugins/maa'},
   { path: '/admin', component: () => import('@/views/UserAdminPage.vue') },
   { path: '/terminal', component: () => import('@/views/DeviceList.vue') },
   { path: '/login', component: () => import('@/views/Login.vue') },

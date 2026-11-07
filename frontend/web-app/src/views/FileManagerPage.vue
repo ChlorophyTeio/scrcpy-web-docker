@@ -1,6 +1,7 @@
+<!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
   <div class="file-manager-page">
-    <header class="fm-header">
+    <header v-if="!embedded" class="fm-header">
       <div class="fm-title-block">
         <div class="fm-title-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -27,6 +28,7 @@
       </div>
     </header>
 
+    <div v-if="embedded" class="fm-inline-connection"><span class="connection-pill" :class="connectionClass"><span class="status-dot"></span>{{connectionText}}</span><button v-if="!isFileChannelReady&&!isConnecting" @click="reconnectDevice">重新连接</button></div>
     <main class="fm-body">
       <section v-if="!selectedDeviceId" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -61,7 +63,7 @@
           </button>
           <div class="path-box">
             <span>路径</span>
-            <input v-model="pathDraft" @keyup.enter="applyPath" @blur="pathDraft = currentPath" />
+            <input aria-label="当前文件目录" v-model="pathDraft" @keyup.enter="applyPath" @blur="pathDraft = currentPath" />
           </div>
           <button class="icon-btn" @click="refreshFileList" title="刷新">
             <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
@@ -76,6 +78,7 @@
           </label>
         </div>
 
+        <div class="fm-navigation"><div class="fm-quick-paths"><button v-for="shortcut in shortcuts" :key="shortcut.path" @click="jump(shortcut.path)">{{shortcut.label}}</button></div><div class="fm-breadcrumbs"><button @click="jump('/')">根目录</button><template v-for="(part,i) in breadcrumbs" :key="part.path"><span>/</span><button @click="jump(part.path)">{{part.name}}</button></template></div><div class="fm-search-row"><input v-model="fileSearch" placeholder="搜索当前目录文件" aria-label="搜索当前目录文件"/><label><input type="checkbox" v-model="showHidden"/>显示隐藏文件</label><span>{{sortedFiles.length}} 项</span></div><p v-if="fileNotice" role="status">{{fileNotice}}</p></div>
         <div class="selection-bar" :class="{ visible: selectedFiles.length > 0 }">
           <div class="selection-summary">
             <strong>{{ selectedFiles.length }}</strong>
@@ -89,6 +92,7 @@
             <button class="secondary-btn" :disabled="selectedInstallableFiles.length === 0" @click="installSelectedApks">
               安装 APK
             </button>
+            <button class="secondary-btn" :disabled="selectedFiles.length!==1||fileBusy" @click="openFileAction('rename')">重命名</button><button class="secondary-btn" :disabled="selectedFiles.length!==1||fileBusy" @click="openFileAction('copy')">复制</button><button class="secondary-btn" :disabled="selectedFiles.length!==1||fileBusy" @click="openFileAction('move')">移动</button>
             <button class="danger-btn" @click="deleteSelected">删除</button>
           </div>
         </div>
@@ -104,6 +108,7 @@
             <div>释放后上传到当前目录</div>
           </div>
 
+          <p v-if="listError" class="fm-inline-error" role="alert">{{listError}} <button @click="refreshFileList">重试</button></p>
           <div class="list-head">
             <label class="check-cell">
               <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll($event.target.checked)" />
@@ -118,7 +123,7 @@
             <span>正在读取文件列表</span>
           </div>
           <div v-else-if="sortedFiles.length === 0" class="list-state">
-            <span>空目录或无权限</span>
+            <span>{{fileSearch?'没有匹配的文件':'目录为空'}}</span>
           </div>
           <div v-else class="file-list">
             <div
@@ -140,7 +145,7 @@
                 </div>
                 <div class="file-text">
                   <span class="file-name">{{ file.name }}</span>
-                  <span class="file-path">{{ file.path }}</span>
+                  <span class="file-path">{{ file.path }}</span><div class="file-row-tools" @click.stop @dblclick.stop><button @click="inspectFile(file,false)">详情</button><button v-if="!file.is_dir&&isTextFile(file)" @click="inspectFile(file,true)">预览</button><button v-if="!file.is_dir" @click="downloadFile(file)">下载</button></div>
                 </div>
               </div>
               <div class="file-size">{{ file.is_dir ? '文件夹' : formatFileSize(file.size) }}</div>
@@ -163,12 +168,15 @@
               <div class="transfer-progress">
                 <div :style="{ width: t.progress + '%' }"></div>
               </div>
+              <p v-if="t.message" class="fm-transfer-message">{{t.message}}</p>
               <button v-if="isTransferDone(t)" @click="removeTransfer(t.id)">×</button>
             </div>
           </div>
         </aside>
       </section>
     </main>
+    <div v-if="fileDialog" class="device-op-modal-overlay" @click.self="!fileBusy&&(fileDialog=null)"><form class="device-op-modal" role="dialog" aria-modal="true" aria-label="文件操作" @submit.prevent="submitFileAction"><h3>{{fileDialog.label}}</h3><p>{{fileDialog.file.path}}</p><label>{{fileDialog.action==='rename'?'新名称':'目标完整路径'}}<input v-model="fileDialog.destination" required aria-label="文件操作目标"/></label><p class="device-op-note">目标已存在时不会覆盖。复制或移动目录可能需要稍等。</p><p role="status">{{fileDialog.error}}</p><div class="device-op-actions"><button type="button" @click="fileDialog=null" :disabled="fileBusy">取消</button><button :disabled="fileBusy">{{fileBusy?'处理中…':'确认'+fileDialog.label}}</button></div></form></div>
+    <div v-if="fileInfo" class="device-op-modal-overlay" @click.self="fileInfo=null"><section class="device-op-modal" role="dialog" aria-modal="true" aria-label="文件详情"><header><h3>{{fileInfo.preview?'文本预览':'文件详情'}}</h3><button @click="fileInfo=null" aria-label="关闭文件详情">×</button></header><code>{{fileInfo.path}}</code><p v-if="fileInfo.loading">读取中…</p><p v-if="fileInfo.error" role="alert">{{fileInfo.error}}</p><template v-if="!fileInfo.loading&&!fileInfo.error"><p>{{fileInfo.type}} · {{formatFileSize(fileInfo.size)}} · 权限 {{fileInfo.mode}}</p><p>修改时间 {{formatTime(fileInfo.modified)}}</p><pre v-if="fileInfo.preview">{{fileInfo.text}}</pre></template><button @click="fileInfo=null">关闭</button></section></div>
   </div>
 </template>
 
@@ -176,10 +184,12 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useDeviceStore } from '@/stores/devices'
 import { useDeviceFiles } from '@/composables/useDeviceFiles'
+import {normalizeDevicePath,validFileName} from '@/utils/deviceManagement'
 import { hashFileIncremental } from '@/utils/sha256'
 
+const props=defineProps({deviceId:String,embedded:Boolean})
 const deviceStore = useDeviceStore()
-const selectedDeviceId = ref('')
+const selectedDeviceId = ref(props.deviceId||'')
 
 let webrtc = null
 let unwatchStatus = null
@@ -194,6 +204,9 @@ const currentPath = ref('/sdcard')
 const pathDraft = ref('/sdcard')
 const fileList = ref([])
 const filesLoading = ref(false)
+const fileSearch=ref(''),showHidden=ref(false),listError=ref(''),fileNotice=ref(''),fileBusy=ref(false),fileDialog=ref(null),fileInfo=ref(null)
+let listRequestId='',listTimer,requestSequence=0
+watch(()=>props.deviceId,value=>{if(value)selectedDeviceId.value=value})
 const dragOver = ref(false)
 const selectedPaths = ref(new Set())
 const sortKey = ref('name')
@@ -227,7 +240,7 @@ const connectionClass = computed(() => {
 })
 
 const sortedFiles = computed(() => {
-  const files = [...fileList.value]
+  const files = fileList.value.filter(file=>(showHidden.value||!file.name.startsWith('.'))&&(!fileSearch.value||file.name.toLowerCase().includes(fileSearch.value.toLowerCase())))
   const direction = sortDir.value === 'asc' ? 1 : -1
   files.sort((a, b) => {
     if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
@@ -250,10 +263,21 @@ const allVisibleSelected = computed(() => sortedFiles.value.length > 0 && sorted
 const hasActiveUpload = computed(() => activeTransfers.value.some(item => ['upload', 'upload-install'].includes(item.type) && !isTransferDone(item)))
 
 watch(currentPath, (path) => {
+  fileSearch.value='';listError.value=''
   pathDraft.value = path
 })
 
+const shortcuts=[{label:'内部存储',path:'/sdcard'},{label:'下载',path:'/sdcard/Download'},{label:'照片',path:'/sdcard/DCIM'},{label:'图片',path:'/sdcard/Pictures'},{label:'文档',path:'/sdcard/Documents'},{label:'临时文件',path:'/data/local/tmp'}]
+const breadcrumbs=computed(()=>{const parts=currentPath.value.split('/').filter(Boolean);let value='';return parts.map(name=>{value+='/'+name;return {name,path:value}})})
+function jump(path){currentPath.value=normalizePath(path);clearSelection();refreshFileList()}
+function isTextFile(file){return /\.(txt|log|json|xml|md|csv|ini|conf|cfg|toml|yaml|yml|sh)$/i.test(file.name)}
+async function fileRequest(method,body,query=''){const r=await fetch('/api/devices/'+encodeURIComponent(selectedDeviceId.value)+'/file-tools'+query,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error||'文件操作失败');return d}
+function openFileAction(action){const file=selectedFiles.value[0];if(!file)return;fileDialog.value={file,device:selectedDeviceId.value,action,label:({rename:'重命名',copy:'复制',move:'移动'})[action],destination:action==='rename'?file.name:action==='copy'?file.path+'.copy':file.path,error:''}}
+async function submitFileAction(){const d=fileDialog.value;if(!d||fileBusy.value)return;if(d.device!==selectedDeviceId.value){fileDialog.value=null;return}let destination=d.destination;if(d.action==='rename'){if(!validFileName(destination)){d.error='名称不能包含路径分隔符，且不能为 . 或 ..';return}destination=joinPath(currentPath.value,destination)}fileBusy.value=true;d.error='';try{await fileRequest('POST',{action:d.action,source:d.file.path,destination});fileNotice.value=d.label+'完成';fileDialog.value=null;clearSelection();refreshFileList()}catch(e){d.error=e.message}finally{fileBusy.value=false}}
+async function inspectFile(file,preview){const id=selectedDeviceId.value;fileInfo.value={path:file.path,loading:true,preview};try{const d=await fileRequest('GET',null,'?path='+encodeURIComponent(file.path)+(preview?'&preview=1':''));if(fileInfo.value?.path===file.path&&selectedDeviceId.value===id)fileInfo.value={...d,preview,loading:false}}catch(e){if(fileInfo.value?.path===file.path&&selectedDeviceId.value===id)fileInfo.value={path:file.path,preview,loading:false,error:e.message}}}
+
 function cleanWebRTC() {
+  clearTimeout(listTimer);filesLoading.value=false
   if (unwatchStatus) { unwatchStatus(); unwatchStatus = null }
   if (unwatchError) { unwatchError(); unwatchError = null }
   if (unwatchReady) { unwatchReady(); unwatchReady = null }
@@ -285,6 +309,7 @@ function reconnectDevice() {
 }
 
 watch(selectedDeviceId, (newId) => {
+  fileDialog.value=null;fileInfo.value=null;fileSearch.value='';listError.value='';currentPath.value='/sdcard'
   cleanWebRTC()
   if (!newId) return
 
@@ -314,10 +339,10 @@ watch(selectedDeviceId, (newId) => {
   } else if (isFileChannelReady.value) {
     refreshFileList()
   }
-})
+},{immediate:true})
 
 watch(() => deviceStore.activeDeviceId, (newActiveId) => {
-  if (newActiveId && selectedDeviceId.value !== newActiveId) {
+  if (!props.embedded&&newActiveId && selectedDeviceId.value !== newActiveId) {
     selectedDeviceId.value = newActiveId
   }
 })
@@ -381,11 +406,7 @@ function isApk(file) {
   return file?.name?.toLowerCase().endsWith('.apk')
 }
 
-function normalizePath(path) {
-  const value = String(path || '/sdcard').trim()
-  if (!value) return '/sdcard'
-  return value.startsWith('/') ? value.replace(/\/+/g, '/') : `/${value}`.replace(/\/+/g, '/')
-}
+function normalizePath(path){return normalizeDevicePath(path)}
 
 function joinPath(base, name) {
   return `${base.endsWith('/') ? base.slice(0, -1) : base}/${name}`
@@ -393,8 +414,9 @@ function joinPath(base, name) {
 
 function refreshFileList() {
   if (!isFileChannelReady.value || !webrtc) return
-  filesLoading.value = true
-  webrtc.sendFileChannelCmd({ type: 'list', path: currentPath.value })
+  filesLoading.value = true;listError.value='';clearTimeout(listTimer);listRequestId='file-list-'+(++requestSequence)
+  if(!webrtc.sendFileChannelCmd({ type: 'list', path: currentPath.value,request_id:listRequestId })){filesLoading.value=false;listError.value='文件连接未就绪，请重试';return}
+  listTimer=setTimeout(()=>{filesLoading.value=false;listError.value='读取目录超时，请重试'},15000)
 }
 
 function applyPath() {
@@ -426,6 +448,7 @@ function showNewFolderPrompt() {
   const name = prompt('新建文件夹名称')
   const trimmed = name?.trim()
   if (!trimmed) return
+  if(!validFileName(trimmed)){fileNotice.value='文件夹名称不能包含路径分隔符，也不能为 . 或 ..';return}
   webrtc.sendFileChannelCmd({ type: 'mkdir', path: joinPath(currentPath.value, trimmed) })
 }
 
@@ -742,13 +765,15 @@ function handleFileChannelMessage(data) {
     const msg = JSON.parse(data)
     switch (msg.type) {
       case 'list_reply':
+        if(msg.request_id&&msg.request_id!==listRequestId||msg.path&&normalizePath(msg.path)!==normalizePath(currentPath.value))break
+        clearTimeout(listTimer)
         filesLoading.value = false
         if (msg.success) {
           currentPath.value = msg.path || currentPath.value
           fileList.value = msg.files || []
           selectedPaths.value = new Set([...selectedPaths.value].filter(path => fileList.value.some(file => file.path === path)))
         } else {
-          alert('读取文件列表失败: ' + msg.error)
+          listError.value='读取文件列表失败：'+msg.error;fileList.value=[]
         }
         break
       case 'mkdir_reply':
@@ -971,13 +996,15 @@ function clearFinishedTransfers() {
 }
 
 onMounted(() => {
-  if (deviceStore.activeDeviceId) {
+  if(props.deviceId){selectedDeviceId.value=props.deviceId}
+  else if (deviceStore.activeDeviceId) {
     selectedDeviceId.value = deviceStore.activeDeviceId
   }
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
+  clearTimeout(listTimer)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   cleanWebRTC()
 })
