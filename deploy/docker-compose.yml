@@ -1,7 +1,7 @@
 name: scrcpycat
 services:
   scrcpy-web:
-    image: ${SCRCPYCAT_IMAGE:-chlorophyimo/scrcpycat:0.1.1}
+    image: ${SCRCPYCAT_IMAGE:-chlorophyimo/scrcpycat:0.1.2}
     restart: unless-stopped
     environment:
       SCRCPYCAT_PUBLIC_URL: ${SCRCPYCAT_PUBLIC_URL:-https://localhost:9015}
@@ -48,7 +48,7 @@ services:
       timeout: 3s
       retries: 10
   scrcpycat-cache:
-    image: ${SCRCPYCAT_CACHE_IMAGE:-chlorophyimo/scrcpycat-cache:0.1.1}
+    image: ${SCRCPYCAT_CACHE_IMAGE:-chlorophyimo/scrcpycat-cache:0.1.2}
     restart: unless-stopped
     volumes:
       - redis-data:/data
@@ -56,7 +56,7 @@ services:
       default:
         aliases: [redis]
   maa-web:
-    image: ${SCRCPYCAT_MAA_IMAGE:-chlorophyimo/scrcpycat-maa:0.1.1}
+    image: ${SCRCPYCAT_MAA_IMAGE:-chlorophyimo/scrcpycat-maa:0.1.2}
     restart: unless-stopped
     environment:
       MAA_DEVICE: ${MAA_DEVICE:-}

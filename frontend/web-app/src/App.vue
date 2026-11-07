@@ -20,6 +20,7 @@
           </svg>
         </span>
       </button>
+      <div class="nav-scroll" role="region" aria-label="主导航与设备标签" tabindex="0">
       <div class="nav-links">
         <a href="javascript:void(0)" @click="navigateTo('/')" class="nav-item" :class="{ active: !showDeployPage && !showFilePage && !showTerminalPage && !showMonitorPage && !showUserAdminPage && !showBatchPage && !showShareAdminPage && !showPluginPage }">
           <svg class="nav-item-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -155,6 +156,7 @@
             <span class="nav-tag-count">{{ deviceStore.offlineDevices.length }}</span>
           </button>
         </div>
+      </div>
       </div>
       <!-- 4. 版本号显示 -->
       <div class="nav-version" :title="systemVersion">
@@ -942,10 +944,27 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
   padding: 20px 0; 
   flex-shrink: 0; 
   box-sizing: border-box;
+  min-height: 0;
   transition: width 0.22s ease;
 }
 
+.nav-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #40566c transparent;
+}
+
+.nav-scroll::-webkit-scrollbar { width: 4px; }
+.nav-scroll::-webkit-scrollbar-thumb { background: #40566c; }
+.nav-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 .nav-version {
+  flex: 0 0 auto;
   margin-top: auto;
   font-size: 11px;
   color: #8b949e;
@@ -975,7 +994,8 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 .nav-brand { 
   width: 40px;
   min-height: 40px;
-  margin-bottom: 40px; 
+  flex: 0 0 40px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1101,6 +1121,7 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 
 .nav-links { 
   display: flex; 
+  flex: 0 0 auto;
   flex-direction: column; 
   align-items: center; 
   width: 100%;
@@ -1111,10 +1132,11 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 }
 
 .nav-item { 
+  flex: 0 0 auto;
   min-height: 40px;
   padding: 0 10px; 
   border-radius: 12px; 
-  margin-bottom: 20px; 
+  margin-bottom: 8px;
   opacity: 0.5; 
   text-decoration: none; 
   color: inherit; 
@@ -1314,7 +1336,7 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 
 .nav-tag-group {
   width: 100%;
-  min-height: 0;
+  flex: 0 0 auto;
   margin-top: 8px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
@@ -1378,14 +1400,14 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 
 .nav-tag-list {
   width: 100%;
-  min-height: 0;
+  flex: 0 0 auto;
   margin-top: 12px;
   padding: 0 0 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .side-nav.expanded .nav-tag-list {
@@ -1399,6 +1421,7 @@ body { margin: 0; background: var(--bg-primary); color: #c9d1d9; font-family: -a
 .nav-tag-item {
   width: 36px;
   height: 36px;
+  flex: 0 0 36px;
   min-width: 0;
   display: flex;
   align-items: center;

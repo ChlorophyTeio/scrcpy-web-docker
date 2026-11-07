@@ -34,7 +34,7 @@ USB 调试须在手机上授权。USB 目录整体映射以支持热插拔；若
 
 ## Compose
 
-[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.1**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
+[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.2**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
 
 源码仓库内启动（Docker Compose 2.20+）：
 
