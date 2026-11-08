@@ -1,6 +1,6 @@
 <!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
-  <Teleport to="body">
+  <Teleport :to="teleportTarget">
     <div class="settings-modal">
       <div class="modal-content animate-fade-in">
         <div class="modal-header">
@@ -8,7 +8,7 @@
             <span class="header-icon">⚙️</span>
             <h3>连接设置</h3>
           </div>
-          <button class="close-btn" @click="$emit('close')">×</button>
+          <button type="button" class="close-btn" aria-label="关闭连接设置" @click="$emit('close')">×</button>
         </div>
 
         <!-- 标签页卡片导航 -->
@@ -302,6 +302,7 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps({
+  teleportTarget: { type: [String, Object], default: 'body' },
   settings: {
     type: Object,
     required: true

@@ -3,3 +3,18 @@
 .multi-device-item:fullscreen,.floating-window:fullscreen{width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;background:#08101b}
 .floating-window-tools{display:flex;align-items:center;flex-shrink:0}
 .floating-window[data-web-fullscreen="true"] .window-body,.floating-window:fullscreen .window-body{flex:1;min-height:0}
+
+/* Mobile remote controls stay labelled and reachable in either orientation. */
+@media(max-width:1024px){
+ .multi-device-container.is-single-device>.multi-top-bar{display:none}
+ .multi-device-item>.item-header{min-height:52px;padding:4px 6px;gap:6px}
+ .multi-device-item>.item-header .audio-btn{display:none}
+ .multi-device-item>.item-header .close-btn{min-width:44px;min-height:44px}
+ .multi-device-item>.item-header .header-right{gap:4px}
+ .multi-device-item>.item-header .device-model-badge{display:none}
+ .multi-device-item:fullscreen>.item-header,.multi-device-item[data-web-fullscreen="true"]>.item-header{padding-top:max(4px,env(safe-area-inset-top))}
+}
+
+.multi-device-item:has(.mobile-fullscreen-action)>.item-header{min-height:52px;gap:6px;padding:4px 6px}
+.multi-device-item:has(.mobile-fullscreen-action)>.item-header .close-btn{min-width:44px;min-height:44px}
+.multi-device-item:has(.mobile-fullscreen-action)>.item-header .audio-btn{display:none}

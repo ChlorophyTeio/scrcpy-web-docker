@@ -1,6 +1,6 @@
 <!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
-  <div class="multi-device-container">
+  <div class="multi-device-container" :class="{'is-single-device':activeDeviceIds.length===1}">
     <!-- 顶部全局多机工具条 (Global Multi Bar) -->
     <header class="multi-top-bar">
       <!-- 左侧：工作台标题与设备微缩标签 -->

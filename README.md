@@ -9,9 +9,12 @@ Android 手机网页远控。主容器整合 Web 控制台、USB ADB 和 Linux a
 ![网页远控：设备标题栏、投屏区域与快捷操作](docs/screenshots/remote-desktop.png)
 
 <details>
-<summary>MAA 插件与手机剪贴板</summary>
+<summary>MAA 插件、手机远控与剪贴板</summary>
 
 ![MAA：任务、参数、日志和定时入口](docs/screenshots/maa-desktop.png)
+
+<img src="docs/screenshots/mobile-remote.png" width="300" alt="手机端远控：文字全屏按钮与底部常用操作" />
+<img src="docs/screenshots/mobile-more.png" width="300" alt="手机端远控功能分组面板" />
 
 <img src="docs/screenshots/clipboard-mobile.png" width="300" alt="手机浏览器中的双向剪贴板面板" />
 
@@ -30,11 +33,13 @@ Android 手机网页远控。主容器整合 Web 控制台、USB ADB 和 Linux a
 
 远控窗口的截图、画中画、页面全屏和系统全屏位于设备标题栏；全屏保留标题栏和快捷操作。剪贴板面板支持编辑、仅写入、粘贴、读取手机文字和手动复制；双向剪贴板联动默认开启（保留已明确关闭的选择），只作用于当前操作设备；浏览器允许访问时自动同步，权限受限时保留手机最新文字，提供一键复制。切换传输方式时保留当前窗口中的未发送草稿，关闭面板清空草稿，关闭设备清空全部联动缓存；不保存文字到浏览器存储。
 
+手机端顶部提供带文字的“全屏 / 退出全屏”，底部常驻返回、首页、最近任务、剪贴板和更多。横屏视频按原比例显示，不自动旋转或盖住标题栏；系统全屏不可用时退回页面全屏。屏幕、剪贴板、声音及高级操作在分组面板中管理，全屏内也可打开设置。
+
 USB 调试须在手机上授权。USB 目录整体映射以支持热插拔；若内核仍能看见调试接口、ADB 列表却持续为空，会自动重扫共享 ADB。进程/应用/文件管理、摄像头、终端、群控及独立远端 agent 模式保留。
 
 ## Compose
 
-[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.2**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
+[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.3**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
 
 源码仓库内启动（Docker Compose 2.20+）：
 

@@ -1,6 +1,6 @@
 <!-- Modified for the optional-plugins distribution (2026). See NOTICE. -->
 <template>
-  <div class="device-panel-view" ref="cameraPanel" :style="{ '--camera-toolbar-height': cameraBarHeight + 'px' }" :class="{ 'is-mobile': isMobile, 'mobile-landscape': isMobile && isVideoLandscape && !isCameraMode, 'is-web-fullscreen': isWebFullscreen, 'has-window-header': !!headerTarget, 'is-camera-surveillance': isCameraMode }" @mousemove="onFsUiActivity" @touchstart.passive="onFsUiActivity">
+  <div class="device-panel-view" ref="cameraPanel" :style="{ '--camera-toolbar-height': cameraBarHeight + 'px' }" :class="{ 'is-mobile': isMobile, 'is-web-fullscreen': isWebFullscreen, 'has-window-header': !!headerTarget, 'is-camera-surveillance': isCameraMode }" @mousemove="onFsUiActivity" @touchstart.passive="onFsUiActivity">
     <!-- 主内容区 (视频部分) -->
     <div class="device-client-main">
       <!-- 主视频容器 -->
@@ -39,10 +39,13 @@
 
         <Teleport :to="headerTarget || 'body'" :disabled="!headerTarget">
           <div class="client-window-actions" :class="{'inline-window-actions':!headerTarget}" aria-label="远控窗口操作" @pointerdown="deviceStore.focusDevice(currentId)" @mousedown.stop @click.stop>
+            <button v-if="isMobile && !isCameraMode" type="button" class="window-action mobile-fullscreen-action" :class="{active:isMobileFullscreen}" :aria-label="isMobileFullscreen?'退出全屏':'全屏'" :aria-pressed="isMobileFullscreen" @click="toggleMobileFullscreen"><svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span>{{isMobileFullscreen?'退出全屏':'全屏'}}</span></button>
+            <template v-else>
             <button type="button" class="window-action" title="截图" aria-label="截图" @click="isCameraMode ? takeCameraSnapshot() : takeScreenshot()"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="4"/></svg></button>
             <button v-if="pictureInPictureSupported" type="button" class="window-action" :class="{active:isPiP}" :title="isPiP?'退出画中画':'画中画'" :aria-label="isPiP?'退出画中画':'画中画'" :aria-pressed="isPiP" @click="togglePictureInPicture"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="9" height="7" rx="1" fill="currentColor" stroke="none"/></svg></button>
             <button type="button" class="window-action" :class="{active:isWebFullscreen}" :title="isWebFullscreen?'退出页面全屏':'页面全屏'" :aria-label="isWebFullscreen?'退出页面全屏':'页面全屏'" :aria-pressed="isWebFullscreen" @click="toggleWebFullscreen"><svg class="icon" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6"/></svg></button>
             <button type="button" class="window-action" :class="{active:isFullscreen}" :title="isFullscreen?'退出系统全屏':'系统全屏'" :aria-label="isFullscreen?'退出系统全屏':'系统全屏'" :aria-pressed="isFullscreen" @click="toggleFullscreen"><svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+            </template>
           </div>
         </Teleport>
         <p v-if="windowActionMessage" class="window-action-message" role="status">{{windowActionMessage}}</p>
@@ -116,6 +119,7 @@
           v-if="!isCameraMode"
           ref="hiddenInput"
           class="hidden-keyboard-input"
+          aria-label="手机输入"
           autocomplete="off"
           autocorrect="off"
           autocapitalize="off"
@@ -189,10 +193,10 @@
         </div>
 
         <!-- 悬浮菜单展开时的全屏点击遮罩 -->
-        <div v-if="(isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen) && showMobileMenu" class="fab-overlay" @mousedown.stop.prevent="showMobileMenu = false" @touchstart.stop.prevent="showMobileMenu = false"></div>
+        <div v-if="(!isMobile || isCameraMode) && (isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen) && showMobileMenu" class="fab-overlay" @mousedown.stop.prevent="showMobileMenu = false" @touchstart.stop.prevent="showMobileMenu = false"></div>
 
         <!-- 手机端悬浮菜单 (移入视频容器内，保证全屏时可见) -->
-        <div v-if="isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen" class="mobile-fab-container" :class="{ 'is-compact': isMobileFullscreen }" :style="fabStyle">
+        <div v-if="(!isMobile || isCameraMode) && (isMobile || (isCameraMode && cameraCompact) || isFullscreen || isWebFullscreen)" class="mobile-fab-container" :class="{ 'is-compact': isMobileFullscreen }" :style="fabStyle">
           <button class="mobile-fab-main" :class="{ 'active': showMobileMenu }"
             @mousedown="onFabStart" @mousemove="onFabMove" @mouseup="onFabEnd" @mouseleave="onFabEnd"
             @touchstart.prevent="onFabStart" @touchmove.prevent="onFabMove" @touchend.prevent="onFabEnd">
@@ -353,6 +357,8 @@
         <KeymapEditor v-if="!isCameraMode" :video-element="videoElement" />
       </div>
     </div>
+
+    <MobileRemoteControls v-if="isMobile && !isCameraMode && !isMini" :device-id="currentId" v-model:open="showMobileMenu" :connected="currentWebRTC.status.value==='connected'" :status-text="statusText" :fullscreen="isMobileFullscreen" :can-shell="authStore.canShell" :admin="authStore.isAdmin" :clipboard-auto-sync="clipboardAutoSync" :clipboard-status="clipboardLinkStatus" :audio-action="pageAudioAction" :audio-unavailable-reason="audioUnavailableReason" :picture-in-picture-supported="pictureInPictureSupported" :websocket-mode="isWebSocketMode" :stream-mode-disabled="isWebSocketMode && !webrtcAvailable" :stream-mode-title="streamModeTitle" :group-active="groupControlStore.isGroupControlActive" :custom-buttons="customButtons" @action="mobileAction" @clipboard-toggle="setClipboardAutoSync" @focus="deviceStore.focusDevice(currentId)" />
 
     <div v-if="clipboardLinkState.pending!==null&&effectiveFocused&&!isCameraMode" class="clipboard-link-pending" role="status"><span>手机有新复制的文字</span><button type="button" @click="copyPendingClipboard">复制到本机</button><button type="button" class="dismiss" aria-label="忽略本次剪贴板同步" @click="clipboardLink.dismissPending()">×</button></div>
 
@@ -586,6 +592,7 @@
     </Teleport>
     <!-- 截图预览弹窗 -->
     <ScreenshotModal 
+      :teleport-target="clipboardDialogTarget"
       v-if="showScreenshot" 
       :image-data="screenshotData" 
       @close="showScreenshot = false" 
@@ -593,6 +600,7 @@
 
     <!-- 连接设置弹窗 -->
     <SettingsModal 
+      :teleport-target="clipboardDialogTarget"
       v-if="showSettingsModal" 
       :settings="localSettings" 
       :is-connected="true"
@@ -611,6 +619,7 @@
 
 <script setup>
 import ClipboardPanel from '@/components/ClipboardPanel.vue'
+import MobileRemoteControls from '@/components/MobileRemoteControls.vue'
 import { createClipboardLink, createClipboardLinkState, copiedEventText } from '@/utils/clipboardLink'
 import { clipboardTextError, shouldRouteRemotePaste, readBrowserClipboard, copyBrowserText } from '@/utils/clipboard'
 import { cameraFrameLayout } from '@/utils/cameraLayout'
@@ -1472,7 +1481,7 @@ function onGlobalKeyDown(e) {
 
   debugLog('[GlobalKey] KeyDown. target:', e.target.tagName, 'activeElement:', document.activeElement ? document.activeElement.tagName : 'none', 'key:', e.key)
   
-  if (showClipboardText.value) return
+  if (showClipboardText.value || (showMobileMenu.value && isMobile.value && !isCameraMode.value)) return
 
   // 拦截 Esc 键快速退出页面全屏
   if (e.key === 'Escape' || e.key === 'Esc') {
@@ -1608,10 +1617,6 @@ function isPointInRenderedVideo(clientX, clientY) {
   const videoH = videoNaturalSize.value.height
   if (!video || !videoW || !videoH) return false
 
-  if (needRotateCoords.value) {
-    return clientX >= 0 && clientX <= window.innerWidth && clientY >= 0 && clientY <= window.innerHeight
-  }
-
   const rect = video.getBoundingClientRect()
   const clientRatio = rect.width / rect.height
   const videoRatio = videoW / videoH
@@ -1674,7 +1679,7 @@ function handleWheel(e) {
   const scrollH = wheelDeltaToScroll(e.deltaX);
   debugLog('[Wheel] scrollV:', scrollV, 'scrollH:', scrollH, 'sendScroll:', typeof webrtc.sendScroll)
   if (scrollV !== 0 || scrollH !== 0) {
-    const coord = rotateCoords(e.clientX, e.clientY);
+    const coord = screenCoords(e.clientX, e.clientY);
     if (webrtc.sendScroll(e.clientX, e.clientY, scrollH, scrollV, coord)) {
       e.preventDefault();
     }
@@ -1685,13 +1690,12 @@ function handleWheel(e) {
 let layoutInterval = null
 
 // 手机端和视频方向检测
-const isMobile = ref(window.innerWidth <= 1024)
-const isVideoLandscape = ref(false)
+const isMobile = ref(window.innerWidth <= 1024 || !!uiSession.mobileFullscreen)
 const isMobileFullscreen = computed(() => isMobile.value && (isFullscreen.value || isWebFullscreen.value))
 const fabSize = computed(() => isMobileFullscreen.value ? 44 : 56)
 
 function updateMobileState() {
-  isMobile.value = window.innerWidth <= 1024
+  isMobile.value = window.innerWidth <= 1024 || Boolean(uiSession.mobileFullscreen && (document.fullscreenElement || isWebFullscreen.value))
 }
 
 function onVideoLoaded() {
@@ -1904,6 +1908,8 @@ onMounted(() => {
 
 function handleFullscreenChange() {
   isFullscreen.value = Boolean(document.fullscreenElement && document.fullscreenElement === getWindowHost())
+  if(!document.fullscreenElement&&!isWebFullscreen.value)uiSession.mobileFullscreen=false
+  updateMobileState()
   if (!isFullscreen.value) { try { screen.orientation?.unlock() } catch {} }
   if (isFullscreen.value) {
     if (isWebFullscreen.value) {
@@ -2030,9 +2036,6 @@ const connMetaText = computed(() => {
 
 const showOverlay = computed(() => currentWebRTC.value.status.value !== 'connected' || (isCameraMode.value && !cameraFrameReady.value))
 
-// 是否需要旋转坐标（手机端且视频横屏）
-const needRotateCoords = computed(() => isMobile.value && isVideoLandscape.value)
-
 // 存储视频实际尺寸用于坐标转换
 const videoNaturalSize = ref({ width: 0, height: 0 })
 const cameraFrameReady = computed(() => currentWebRTC.value?.status?.value === 'connected' && (isCanvasRendering.value ? Boolean(currentWebRTC.value?.isFirstFrameRendered?.value || cameraHasFrame.value) : cameraHasFrame.value))
@@ -2049,51 +2052,12 @@ function checkAndRecommendLayout() {
   const isHwc = (rot === 90 || rot === 270) && !isPhysical
   const landscape = isPhysical || isHwc
   const ratio = isHwc ? (videoH / videoW) : (videoW / videoH)
-  isVideoLandscape.value = landscape
   videoNaturalSize.value = { width: videoW, height: videoH }
   emit('recommend-layout', { isLandscape: landscape, ratio: ratio })
 }
 
-// 旋转坐标转换
-function rotateCoords(clientX, clientY) {
-  if (!needRotateCoords.value) return { x: clientX, y: clientY }
-  
-  const activeMedia = (isCanvasRendering.value && canvasElement.value) ? canvasElement.value : videoElement.value
-  if (!activeMedia) return { x: clientX, y: clientY }
-  
-  const screenW = window.innerWidth
-  const screenH = window.innerHeight
-  const videoW = activeMedia.videoWidth || activeMedia.width || videoNaturalSize.value.width
-  const videoH = activeMedia.videoHeight || activeMedia.height || videoNaturalSize.value.height
-  
-  if (!videoW || !videoH) return { x: clientX, y: clientY }
-  
-  const rotatedRatio = videoH / videoW
-  const screenRatio = screenW / screenH
-  
-  let normInVideoX, normInVideoY
-  
-  if (screenRatio > rotatedRatio) {
-    const videoDisplayW = screenH * rotatedRatio
-    const offsetX = (screenW - videoDisplayW) / 2
-    const videoX = clientX - offsetX
-    normInVideoX = videoX / videoDisplayW
-    normInVideoY = clientY / screenH
-  } else {
-    const videoDisplayH = screenW / rotatedRatio
-    const offsetY = (screenH - videoDisplayH) / 2
-    const videoY = clientY - offsetY
-    normInVideoX = clientX / screenW
-    normInVideoY = videoY / videoDisplayH
-  }
-  
-  const origNormX = normInVideoY
-  const origNormY = 1 - normInVideoX
-  const origX = origNormX * videoW
-  const origY = origNormY * videoH
-  
-  return { x: origX, y: origY, isRotated: true }
-}
+// Rendering keeps the stream's orientation; the transport maps object-fit coordinates.
+function screenCoords(clientX, clientY) { return { x: clientX, y: clientY } }
 
 function retry() {
   webrtc.disconnect()
@@ -2110,6 +2074,7 @@ function setWebFullscreen(enabled) {
   const host=getWindowHost()
   if(host) { if(enabled)host.dataset.webFullscreen='true';else delete host.dataset.webFullscreen }
   document.body.classList.toggle('has-web-fullscreen',Boolean(document.querySelector('[data-web-fullscreen="true"]')))
+  updateMobileState()
 }
 function toggleFullscreen() {
   const host=getWindowHost()
@@ -2120,6 +2085,42 @@ function toggleFullscreen() {
   const request=()=>host.requestFullscreen().catch(()=>toggleWebFullscreen())
   if(document.fullscreenElement)document.exitFullscreen().then(request).catch(()=>{})
   else request()
+}
+
+function toggleMobileFullscreen() {
+  showMobileMenu.value=false
+  if(isMobileFullscreen.value)exitFullscreenFromFab()
+  else {uiSession.mobileFullscreen=true;toggleFullscreen()}
+}
+
+function mobileAction(action,index) {
+  const keys={back:4,home:3,recent:187,power:26,'volume-up':24,'volume-down':25}
+  if(keys[action]){quickKey('input keyevent '+keys[action]);return}
+  switch(action){
+    case 'fullscreen':toggleMobileFullscreen();break
+    case 'page-fullscreen':toggleWebFullscreen();break
+    case 'paste':sendClipboardToDevice();break
+    case 'copy':getClipboardFromDevice();break
+    case 'sync':syncClipboardNow();break
+    case 'keyboard':hiddenInput.value?.focus({preventScroll:true});break
+    case 'settings':showSettingsModal.value=true;break
+    case 'screenshot':takeScreenshot();break
+    case 'pip':togglePictureInPicture();break
+    case 'audio':togglePageMute();break
+    case 'stream-mode':toggleStreamMode();break
+    case 'terminal':
+      if(document.fullscreenElement)document.exitFullscreen().then(toggleConsole).catch(()=>windowNotice('请先退出全屏，再打开终端'))
+      else {if(isWebFullscreen.value)toggleWebFullscreen();toggleConsole()}
+      break
+    case 'group':toggleGroupControl();break
+    case 'keymap':keymapStore.setEditMode(true);break
+    case 'key-hints':keymapStore.toggleKeyHints();break
+    case 'custom':if(customButtons.value[index])quickKey(customButtons.value[index].cmd);break
+    case 'delete-custom':removeCustomButton(index);break
+    case 'add-custom':addCustomButton();break
+    case 'disconnect':goBackToList();break
+    case 'quit-agent':quitAgent();break
+  }
 }
 
 function exitFullscreenFromFab() {
@@ -2149,7 +2150,7 @@ function onFsUiActivity() {
 }
 
 function toggleWebFullscreen() {
-  if(isWebFullscreen.value){setWebFullscreen(false);return}
+  if(isWebFullscreen.value){uiSession.mobileFullscreen=false;setWebFullscreen(false);return}
   const enter=()=>{setWebFullscreen(true);onFsUiActivity()}
   if(document.fullscreenElement)document.exitFullscreen().then(enter).catch(()=>windowNotice('无法退出系统全屏，请按 Esc 后重试'))
   else enter()
@@ -2374,7 +2375,7 @@ function onMouseDown(e) {
     e.preventDefault()
     return
   }
-  const coord = rotateCoords(e.clientX, e.clientY)
+  const coord = screenCoords(e.clientX, e.clientY)
   mouseDown = true; 
   deviceStore.focusDevice(currentId.value)
   if (import.meta.env.VITE_DEMO_MODE === 'true' && canvasElement.value) {
@@ -2401,7 +2402,7 @@ function onMouseMove(e) {
     return
   }
   if (mouseDown) {
-    const coord = rotateCoords(e.clientX, e.clientY)
+    const coord = screenCoords(e.clientX, e.clientY)
     webrtc.sendTouch(2, e.clientX, e.clientY, -1, coord)
   }
 }
@@ -2420,7 +2421,7 @@ function onMouseUp(e) {
     e.preventDefault()
     return
   }
-  const coord = rotateCoords(e.clientX, e.clientY)
+  const coord = screenCoords(e.clientX, e.clientY)
   mouseDown = false; 
   webrtc.sendTouch(1, e.clientX, e.clientY, -1, coord)
 }
@@ -2430,7 +2431,7 @@ function onMouseLeave(e) {
     return
   }
   if (mouseDown) { 
-    const coord = rotateCoords(e.clientX, e.clientY)
+    const coord = screenCoords(e.clientX, e.clientY)
     mouseDown = false; 
     webrtc.sendTouch(1, e.clientX, e.clientY, -1, coord)
   }
@@ -2440,7 +2441,7 @@ function onTouchStart(e) {
   if (isCameraMode.value) return
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i]
-    const coord = rotateCoords(t.clientX, t.clientY)
+    const coord = screenCoords(t.clientX, t.clientY)
     webrtc.sendTouch(0, t.clientX, t.clientY, t.identifier, coord)
   }
 }
@@ -2448,7 +2449,7 @@ function onTouchMove(e) {
   if (isCameraMode.value) return
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i]
-    const coord = rotateCoords(t.clientX, t.clientY)
+    const coord = screenCoords(t.clientX, t.clientY)
     webrtc.sendTouch(2, t.clientX, t.clientY, t.identifier, coord)
   }
 }
@@ -2456,7 +2457,7 @@ function onTouchEnd(e) {
   if (isCameraMode.value) return
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i]
-    const coord = rotateCoords(t.clientX, t.clientY)
+    const coord = screenCoords(t.clientX, t.clientY)
     webrtc.sendTouch(1, t.clientX, t.clientY, t.identifier, coord)
   }
 }
@@ -2476,6 +2477,12 @@ function onTouchEnd(e) {
 .inline-window-actions{position:absolute;right:8px;top:8px;z-index:110;background:#102033d9;border:1px solid #334b61;border-radius:9px;padding:3px}
 .window-action-message{position:absolute;z-index:160;top:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 12px;border-radius:9px;background:#14324aee;color:#cae9ff;box-shadow:0 4px 18px #0005;font-size:12px;pointer-events:none}
 @media(max-width:600px){.window-action{width:36px;height:36px}}
+.window-action.mobile-fullscreen-action{width:auto;min-width:80px;min-height:44px;padding:8px 10px;gap:6px;font:inherit;font-size:13px;color:#bceaff;background:#17405a;border-color:#397b9c;white-space:nowrap}
+.device-panel-view.is-mobile:not(.is-camera-surveillance){flex-direction:column!important}
+.device-panel-view.is-mobile:not(.is-camera-surveillance) .device-client-main{flex:1 1 0!important;min-height:0;height:auto!important;width:100%}
+.device-panel-view.is-mobile:not(.is-camera-surveillance) .video-wrapper{min-height:0;flex:1 1 0;height:auto!important}
+.is-mobile .clipboard-link-pending{bottom:76px}
+
 
 .audio-error-notice { position: absolute; bottom: 48px; left: 12px; right: 12px; z-index: 12; padding: 8px 12px; border-radius: 6px; background: #30251ee8; color: #fbbf24; font-size: 12px; }
 .audio-error-notice button { margin-left: 10px; cursor: pointer; }
@@ -3034,48 +3041,6 @@ function onTouchEnd(e) {
 .close-console:hover { color: #f85149; }
 .adb-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center; padding: 20px; }
 .adb-connect-btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; margin-bottom: 12px; cursor: pointer; font-weight: 600; }
-
-/* 手机端横屏视频全屏显示 - 长边对长边 */
-@media (max-width: 1024px) {
-  .device-panel-view.mobile-landscape {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: #000;
-  }
-  
-  .device-panel-view.mobile-landscape .video-wrapper {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-  }
-  
-  .device-panel-view.mobile-landscape .video-stream {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100vh;
-    height: 100vw;
-    transform: translate(-50%, -50%) rotate(90deg);
-    object-fit: contain;
-  }
-  
-  .device-panel-view.mobile-landscape .fullscreen-fab {
-    z-index: 101;
-  }
-  
-  .device-panel-view.mobile-landscape .console-drawer {
-    position: fixed;
-    bottom: 60px;
-    left: 0;
-    right: 0;
-    z-index: 100;
-  }
-  
-  .device-panel-view.mobile-landscape .panel-overlay {
-    z-index: 50;
-  }
-}
 
 /* 群控从机侧栏布局 */
 .group-control-btn.active { background: rgba(255, 159, 67, 0.18); border-color: #ff9f43; color: #ff9f43; }

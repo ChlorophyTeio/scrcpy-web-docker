@@ -1,6 +1,6 @@
 # 发布维护
 
-项目：<https://github.com/ChlorophyTeio/scrcpy-web-docker>。Docker Hub 命名空间：`chlorophyimo`。当前发布使用 `v0.1.2` Git 标签及 `0.1.2` 镜像标签。
+项目：<https://github.com/ChlorophyTeio/scrcpy-web-docker>。Docker Hub 命名空间：`chlorophyimo`。当前发布使用 `v0.1.3` Git 标签及 `0.1.3` 镜像标签。
 
 | 组件 | 镜像 | Unraid 模板 |
 | --- | --- | --- |
@@ -15,7 +15,7 @@
 3. Repository Variables 可覆盖 `DOCKERHUB_NAMESPACE`（默认 `chlorophyimo`）与 `IMAGE_NAME`（默认 `scrcpycat`）。
 4. 创建并推送 `v版本号` Git 标签。手动运行 **Build or publish images**，填写不带 `v` 的版本号；`publish=false` 只构建，`publish=true` 上传三个镜像。
 5. 工作流从指定标签构建 Android agent、scrcpy server 和 linux/amd64、linux/arm64 镜像。源码提交号写入镜像标签信息。稳定版标记 `latest`，预发布版不覆盖 `latest`。
-6. 运行 `python3 tools/package-stack.py --version 0.1.2` 生成无凭据的独立部署包。验证工作流与镜像清单后创建 GitHub Release，附上三份 Unraid XML、独立 stack 包、源码包及 SHA-256 校验文件。Unraid Community Applications 收录需要另外申请。
+6. 运行 `python3 tools/package-stack.py --version 0.1.3` 生成无凭据的独立部署包。验证工作流与镜像清单后创建 GitHub Release，附上三份 Unraid XML、独立 stack 包、源码包及 SHA-256 校验文件。Unraid Community Applications 收录需要另外申请。
 
 普通提交只运行检查，不上传镜像。仓库访问凭据通过 GitHub 登录授权管理，不放进发布目录。更改仓库或镜像名后运行 `tools/generate-unraid.py` 更新项目、镜像、支持和图标链接。
 
@@ -23,9 +23,9 @@
 
 ```bash
 make build-agent-docker build-scrcpy-server
-docker build --build-arg VERSION=0.1.2 --build-arg REVISION="$(git rev-parse HEAD)" -t chlorophyimo/scrcpycat:0.1.2 .
-docker build -f plugins/maa/Dockerfile -t chlorophyimo/scrcpycat-maa:0.1.2 .
-docker build -f cache/Dockerfile --build-arg VERSION=0.1.2 -t chlorophyimo/scrcpycat-cache:0.1.2 .
+docker build --build-arg VERSION=0.1.3 --build-arg REVISION="$(git rev-parse HEAD)" -t chlorophyimo/scrcpycat:0.1.3 .
+docker build -f plugins/maa/Dockerfile -t chlorophyimo/scrcpycat-maa:0.1.3 .
+docker build -f cache/Dockerfile --build-arg VERSION=0.1.3 -t chlorophyimo/scrcpycat-cache:0.1.3 .
 ```
 
 在 amd64 主机普通 `docker build` 得到的镜像仅覆盖 amd64。多架构版本用发布工作流构建，并以实际推送的 manifest 为准；不要将 Go 交叉编译或 QEMU 构建称为 arm64 手机主机的实测。

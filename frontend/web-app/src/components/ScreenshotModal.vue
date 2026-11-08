@@ -1,10 +1,10 @@
 <template>
-  <Teleport to="body">
+  <Teleport :to="teleportTarget">
     <div class="screenshot-modal" @click.self="$emit('close')">
       <div class="modal-content">
         <div class="modal-header">
           <h3>📷 截图</h3>
-          <button class="close-btn" @click="$emit('close')">×</button>
+          <button type="button" class="close-btn" aria-label="关闭截图预览" @click="$emit('close')">×</button>
         </div>
         <div class="modal-body">
           <img :src="imageUrl" alt="Screenshot" class="screenshot-image" />
@@ -22,6 +22,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({
+  teleportTarget: { type: [String, Object], default: 'body' },
   imageData: {
     type: [String, Array, Object],
     default: null
