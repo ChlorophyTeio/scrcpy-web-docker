@@ -39,7 +39,7 @@ USB 调试须在手机上授权。USB 目录整体映射以支持热插拔；若
 
 ## Compose
 
-[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.3**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
+[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.4**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
 
 源码仓库内启动（Docker Compose 2.20+）：
 
@@ -62,6 +62,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
 - 浏览器每 10 秒刷新插件状态，停止 MAA 后隐藏入口，服务就绪后恢复。
 - 保留任务、定时、Windows 配置导入、关卡选择、识别记录、CPU 推理模式、核心更新/回退和独立资源热更新。
 - worker 是独立实现的适配服务，不包含旧 `maa_docker` 网页后台。使用官方 maa-cli 0.7.7，首次启动下载核心和资源，需要 GitHub 连通性。
+- 插件自带的信用商店识别规则随镜像更新，旧文件自动备份，附加的自定义任务保留；不需要升级 MaaCore。
 - 配置、核心资源和缓存分别持久化。`MAA_DEVICE` 填远控中显示的设备标识；仅在新配置且恰好有一台已授权手机时尝试自动选择。
 - 执行端 API 仅在内部网络使用，不单独公开端口。浏览器经主服务管理员认证代理访问。
 

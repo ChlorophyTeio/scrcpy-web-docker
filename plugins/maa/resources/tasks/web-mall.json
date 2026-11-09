@@ -66,10 +66,13 @@
     "action": "ClickSelf",
     "postDelay": 1500,
     "next": [
-      "WebMall-OperatorSkip",
-      "WebMall-OperatorFinish",
+      "WebMall-ReturnedToStore",
       "CreditShop-NoMoney",
-      "WebMall-HireOperator@LoadingText"
+      "WebMall-OperatorSkip",
+      "WebMall-OperatorFinish"
+    ],
+    "reduceOtherTimes": [
+      "WebMall-OperatorFinish*10"
     ]
   },
   "WebMall-OperatorSkip": {
@@ -79,16 +82,29 @@
       "WebMall-ReturnedToStore",
       "WebMall-OperatorSkip",
       "WebMall-OperatorFinish"
-    ]
+    ],
+    "template": "RecruitSkip.png"
   },
   "WebMall-OperatorFinish": {
-    "baseTask": "RecruitFinish",
+    "baseTask": "RecruitSkipWithoutButton",
+    "algorithm": "JustReturn",
+    "action": "ClickRect",
+    "specificRect": [
+      1180,
+      15,
+      85,
+      60
+    ],
+    "maxTimes": 10,
+    "postDelay": 750,
     "reduceOtherTimes": [],
     "next": [
       "WebMall-ReturnedToStore",
       "WebMall-OperatorSkip",
-      "WebMall-OperatorFinish",
-      "WebMall-OperatorFinish@LoadingText"
+      "WebMall-OperatorFinish"
+    ],
+    "exceededNext": [
+      "WebMall-ReturnedToStore"
     ]
   },
   "WebMall-ReturnedToStore": {

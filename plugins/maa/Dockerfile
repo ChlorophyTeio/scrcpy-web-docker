@@ -13,6 +13,7 @@ COPY plugins/maa/docker/install-cli.py /tmp/install-cli.py
 RUN TARGETARCH=$TARGETARCH python3 /tmp/install-cli.py && rm /tmp/install-cli.py
 COPY --from=build /out/maa-plugin /app/main
 COPY plugins/maa/docker/configure-device.py /opt/configure-device.py
+COPY plugins/maa/docker/install-resources.py /opt/install-resources.py
 COPY --chmod=755 plugins/maa/docker/start.sh /opt/start.sh
 COPY --chmod=755 plugins/maa/docker/maa-phone-display /usr/local/bin/maa-phone-display
 COPY plugins/maa/resources /opt/maa-plugin/resources

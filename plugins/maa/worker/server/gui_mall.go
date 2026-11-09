@@ -10,19 +10,19 @@ import (
 
 const guiNativeLogPath = "/root/.local/state/maa/debug/asst.log"
 
-type guiMallLogMark struct {
+type guiNativeLogMark struct {
 	info   os.FileInfo
 	offset int64
 }
 
-func guiMarkMallLog() guiMallLogMark {
+func guiMarkNativeLog() guiNativeLogMark {
 	info, err := os.Stat(guiNativeLogPath)
 	if err != nil {
-		return guiMallLogMark{}
+		return guiNativeLogMark{}
 	}
-	return guiMallLogMark{info: info, offset: info.Size()}
+	return guiNativeLogMark{info: info, offset: info.Size()}
 }
-func guiMallReport(mark guiMallLogMark, params map[string]any) (string, bool) {
+func guiMallReport(mark guiNativeLogMark, params map[string]any) (string, bool) {
 	if shopping, ok := params["shopping"].(bool); ok && !shopping {
 		return "信用收取已结束；本次设置未启用购物", false
 	}
@@ -108,6 +108,13 @@ func guiMallLogReport(raw string) (string, bool) {
 		}
 	}
 	if failures > 0 || retryFailures > 0 {
+		if strings.Contains(raw, "templ not found WebMall-Operator") {
+			prefix := ""
+			if purchases > 0 {
+				prefix = fmt.Sprintf("已确认 %d 次购买；", purchases)
+			}
+			return prefix + "干员聘用后未能返回商店：插件缺少干员获得画面的识别模板，请更新插件资源后重试", true
+		}
 		if purchases > 0 {
 			return fmt.Sprintf("已确认 %d 次购买，但部分商品的购买确认识别失败；请检查商店弹窗和遮挡商品的悬浮窗", purchases), true
 		}

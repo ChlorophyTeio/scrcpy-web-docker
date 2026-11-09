@@ -22,7 +22,7 @@ PROFILE
 fi
 python3 /opt/configure-device.py
 if [[ ! -f /app/config/maa/cli.toml ]];then printf '[core]\nchannel = "Stable"\n[resource]\nauto_update = false\n' > /app/config/maa/cli.toml;fi
-if [[ ! -f /app/config/maa/resource/tasks/web-mall.json ]];then cp /opt/maa-plugin/resources/tasks/web-mall.json /app/config/maa/resource/tasks/;fi
+python3 /opt/install-resources.py
 if [[ ! -f /root/.local/share/maa/lib/libMaaCore.so ]];then maa install stable --batch --test-time 0;fi
 maa version
 /usr/local/bin/maa-phone-display restore || true

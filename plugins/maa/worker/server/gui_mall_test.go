@@ -16,6 +16,7 @@ func TestMallReportSeparatesPurchaseProofFromTaskCompletion(t *testing.T) {
 		name, log, want string
 		warning         bool
 	}{
+		{"missing operator template", start + "templ not found WebMall-OperatorSkip.png\n" + failure, "插件缺少干员获得画面的识别模板", true},
 		{"ignored shopping errors", start + failure + event("TaskChainCompleted", ""), "未确认购买成功", true},
 		{"transient retry recovered", start + failure + success, "完成 1 次", false},
 		{"unresolved item followed by success", start + strings.Repeat(failure, 4) + success, "已确认 1 次购买", true},

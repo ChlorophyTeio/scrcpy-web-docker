@@ -508,6 +508,21 @@ func guiRun(ctx context.Context, cancel context.CancelFunc, value GUIConfig, pat
 		gui.state.Running = false
 		gui.state.Stopping = false
 		gui.state.Finished = time.Now().Format(time.RFC3339)
+		if runErr != nil || ctx.Err() != nil {
+			if gui.state.TaskResults == nil {
+				gui.state.TaskResults = map[string]string{}
+			}
+			reason := "前序任务失败，未执行"
+			if ctx.Err() != nil {
+				reason = "任务已停止，未执行"
+			}
+			for id, state := range gui.state.States {
+				if state == "pending" {
+					gui.state.States[id] = "skipped"
+					gui.state.TaskResults[id] = reason
+				}
+			}
+		}
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			gui.state.Message = "已达到运行时长上限，任务已停止"
 		} else if ctx.Err() != nil {
@@ -577,9 +592,9 @@ func guiRun(ctx context.Context, cancel context.CancelFunc, value GUIConfig, pat
 				runErr = guiExecuteCommand(ctx, "/usr/local/bin/maa-phone-display", "prepare")
 			}
 			if runErr == nil {
-				mark := guiMallLogMark{}
-				if id == "mall" {
-					mark = guiMarkMallLog()
+				mark := guiNativeLogMark{}
+				if id == "mall" || id == "award" {
+					mark = guiMarkNativeLog()
 				}
 				runErr = guiExecuteCommand(context.WithValue(ctx, guiRecognitionTaskKey{}, id), "maa", "run", paths[id], "--batch")
 				if runErr == nil && id == "mall" && ctx.Err() == nil {
@@ -603,6 +618,9 @@ func guiRun(ctx context.Context, cancel context.CancelFunc, value GUIConfig, pat
 						}
 					}
 				}
+				if runErr != nil && id == "award" && ctx.Err() == nil {
+					runErr = guiAwardFailure(runErr, mark)
+				}
 				if runErr != nil && id == "fight" && ctx.Err() == nil {
 					runErr = guiFightFailure(runErr)
 				}
@@ -618,6 +636,12 @@ func guiRun(ctx context.Context, cancel context.CancelFunc, value GUIConfig, pat
 		}
 		if runErr != nil {
 			state = "failed"
+			if ctx.Err() == nil {
+				if gui.state.TaskResults == nil {
+					gui.state.TaskResults = map[string]string{}
+				}
+				gui.state.TaskResults[id] = runErr.Error()
+			}
 		}
 		if ctx.Err() != nil {
 			state = "stopped"
@@ -671,8 +695,8 @@ func InitGUI(api *gin.RouterGroup) {
 	guiInitCoreUpdates()
 	guiInitSchedules()
 	g := api.Group("/gui")
-	g.GET("/plugin",func(c *gin.Context){c.JSON(200,gin.H{"id":"maa","api_version":1,"name":"MAA"})})
- g.GET("/config", guiConfigHandler)
+	g.GET("/plugin", func(c *gin.Context) { c.JSON(200, gin.H{"id": "maa", "api_version": 1, "name": "MAA"}) })
+	g.GET("/config", guiConfigHandler)
 	g.POST("/config", guiConfigHandler)
 	g.GET("/status", guiStatus)
 	g.GET("/performance", guiPerformance)
