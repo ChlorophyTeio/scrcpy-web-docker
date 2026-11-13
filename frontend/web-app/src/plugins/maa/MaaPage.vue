@@ -42,22 +42,24 @@
      </div>
      <div class="maa-parameter-bottom"><div class="maa-config-actions"><button @click="save" :disabled="status.running||busy">保存设置</button><button @click="validate(config.enabled)" :disabled="status.running||busy">检查配置</button></div><p>设置不会自动启动任务。作战前请保持手机已解锁，并登录所选游戏客户端。</p></div>
     </main>
-    <div class="maa-log-pane"><div class="maa-log-status" :class="{error:messageKind==='error',warning:messageKind==='warning'||status.warnings?.length>0}" role="status"><time>{{clock}}</time><span>{{message||status.message||'就绪，等待开始'}}</span></div><div class="maa-log-actions"><span>实时日志</span><button @click="logs=[]">清空</button><button @click="downloadLogs">导出</button></div><pre ref="logPane" class="maa-log-lines" aria-label="MAA 实时日志">{{logs.join('\n')||'等待运行日志…'}}</pre></div>
+    <div class="maa-log-pane"><div class="maa-log-status" :class="{error:messageKind==='error',warning:messageKind==='warning'||status.warnings?.length>0}" role="status"><time>{{clock}}</time><span>{{message||status.message||'就绪，等待开始'}}</span></div><MaaLogPanel :entries="logEntries" :connection="logConnection" @clear="clearLogs" /></div>
    </div>
-   <MaaCopilotLibrary v-else-if="activeTab==='copilot'" :config="config" :disabled="status.running||busy" :running="status.running" :logs="logs" @start="start" @validate="validate" @stop="stop"/>
+   <MaaCopilotLibrary v-else-if="activeTab==='copilot'" :config="config" :disabled="status.running||busy" :running="status.running" :log-entries="logEntries" :log-connection="logConnection" @clear-logs="clearLogs" @start="start" @validate="validate" @stop="stop"/>
    <div v-else-if="activeTab==='tools'" class="maa-content-page"><h2>小工具</h2><div class="maa-tools-grid">
     <button @click="checkConnection"><strong>连接检测</strong><span>检查 USB、ADB 和游戏安装状态</span></button><button @click="openPhone"><strong>手机远控</strong><span>查看手机画面、解锁和手动操作</span></button><button @click="validate(config.enabled)" :disabled="status.running||busy"><strong>配置检查</strong><span>解析配置，不连接或操作游戏</span></button><button @click="downloadLogs"><strong>导出日志</strong><span>下载当前浏览器收到的日志</span></button><button @click="start(['recruitcalc'])" :disabled="status.running||busy"><strong>公招计算</strong><span>请先进入标签界面；只识别与计算，不选择标签或确认招募</span></button><button @click="start(['depot'])" :disabled="status.running||busy"><strong>仓库识别</strong><span>请先手动进入游戏仓库界面</span></button><button @click="start(['operbox'])" :disabled="status.running||busy"><strong>干员识别</strong><span>请先手动进入游戏干员列表</span></button>
    </div><MaaRecognitionResults :disabled="status.running||busy" :running="status.running"/></div>
    <MaaSchedules v-else-if="activeTab==='schedule'" :config="config"/>
-   <MaaSettingsPanel v-else :config="config" :connection="connection" :status="status" :logs="logs" @maintenance-started="maintenanceStarted" @resource-update="resourceUpdate" @stop="stop" :disabled="status.running||busy" @save="save" @check="checkConnection" @import-config="applyImportedConfig"/>
+   <MaaSettingsPanel v-else :config="config" :connection="connection" :status="status" :log-entries="logEntries" :log-connection="logConnection" @clear-logs="clearLogs" @maintenance-started="maintenanceStarted" @resource-update="resourceUpdate" @stop="stop" :disabled="status.running||busy" @save="save" @check="checkConnection" @import-config="applyImportedConfig"/>
    <footer class="maa-message-bar" role="status" :class="{error:messageKind==='error',warning:messageKind==='warning'||status.warnings?.length>0}">{{message||status.message||'就绪'}}</footer>
   </template>
  </section>
 </template>
 <script setup>
-import {ref,computed,onMounted,onUnmounted,nextTick} from 'vue'
+import {ref,computed,onMounted,onUnmounted} from 'vue'
 import {useAuthStore} from '@/stores/auth'
 import {useDeviceStore} from '@/stores/devices'
+import MaaLogPanel from '@/plugins/maa/components/MaaLogPanel.vue'
+import {createMaaLogStore} from '@/plugins/maa/utils/maaLogs'
 import MaaStagePicker from '@/plugins/maa/components/MaaStagePicker.vue'
 import MaaParameterFields from '@/plugins/maa/components/MaaParameterFields.vue'
 import MaaCopilotLibrary from '@/plugins/maa/components/MaaCopilotLibrary.vue'
@@ -68,7 +70,8 @@ import MaaRawParameters from '@/plugins/maa/components/MaaRawParameters.vue'
 import {advancedFields,reportingFields,normalizePlan} from '@/plugins/maa/utils/maaSettings'
 import {tasks,copilotTask,clonePlan,fightLimit,selectedPlan,taskOrder} from '@/plugins/maa/utils/maaTasks'
 const auth=useAuthStore(),deviceStore=useDeviceStore(),tabs=[{id:'daily',name:'一键长草'},{id:'copilot',name:'自动战斗'},{id:'schedule',name:'定时任务'},{id:'tools',name:'小工具'},{id:'settings',name:'设置'}]
-const activeTab=ref('daily'),mobileView=ref('tasks'),selectedTask=ref('fight'),config=ref(null),loading=ref(true),busy=ref(false),connection=ref({}),status=ref({states:{}}),logs=ref([]),message=ref(''),messageKind=ref('info'),materials=ref([]),copilotName=ref(''),logPane=ref(null),clock=ref('')
+const activeTab=ref('daily'),mobileView=ref('tasks'),selectedTask=ref('fight'),config=ref(null),loading=ref(true),busy=ref(false),connection=ref({}),status=ref({states:{}}),logEntries=ref([]),logConnection=ref('connecting'),message=ref(''),messageKind=ref('info'),materials=ref([]),copilotName=ref(''),clock=ref('')
+const logStore=createMaaLogStore(),logs=computed(()=>logEntries.value.map(entry=>entry.raw))
 const parameterTab=ref('basic'),infrastFiles=ref([])
 const orderedTasks=computed(()=>taskOrder(config.value||{}).map(id=>tasks.find(t=>t.id===id)))
 let socket,pollTimer,sessionTimer,clockTimer,disposed=false,reconnectTimer
@@ -100,8 +103,19 @@ async function importInfrast(event){const file=event.target.files[0];if(!file)re
 function applyRawParams(value){const c=clonePlan(config.value);c.params[selectedTask.value]=value;config.value=normalizePlan(c);notify('核心参数已应用到草稿，请检查并保存')}
 function applyImportedConfig(value){config.value=normalizePlan(value);notify('Windows 配置已转换到草稿，请核对后保存')}
 function openPhone(){const device=deviceStore.devices.find(d=>d.id===connection.value.device);if(!device){notify('未找到在线手机，请刷新连接状态','error');return}deviceStore.openDevice(device.id);if(innerWidth<=1024)window.dispatchEvent(new CustomEvent('cloudphone-navigate',{detail:'/'}))}
-function addLogs(lines){for(const line of lines)logs.value.push(String(line).replace(/\x1b\[[0-9;]*m/g,''));if(logs.value.length>1500)logs.value.splice(0,logs.value.length-1500);nextTick(()=>{if(logPane.value)logPane.value.scrollTop=logPane.value.scrollHeight})}
-function connectLogs(){if(disposed)return;socket?.close();const url=new URL('/api/plugins/maa/proxy/ws',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';socket=new WebSocket(url);socket.onmessage=e=>{try{const data=JSON.parse(e.data);if(data.history)addLogs(data.history);else if(data.msg)addLogs([data.msg])}catch{}};socket.onclose=()=>{if(!disposed)reconnectTimer=setTimeout(connectLogs,3000)};socket.onerror=()=>{}}
+function clearLogs(){logStore.clear();logEntries.value=[]}
+function connectLogs(){
+ if(disposed)return
+ clearTimeout(reconnectTimer)
+ if(socket){socket.onclose=null;socket.close()}
+ logConnection.value='connecting'
+ const url=new URL('/api/plugins/maa/proxy/ws',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:'
+ const current=socket=new WebSocket(url)
+ current.onopen=()=>{if(socket===current&&!disposed)logConnection.value='connected'}
+ current.onmessage=e=>{if(socket!==current||disposed)return;try{if(logStore.receive(JSON.parse(e.data)).length)logEntries.value=[...logStore.entries]}catch{}}
+ current.onclose=()=>{if(socket!==current||disposed)return;logConnection.value='reconnecting';reconnectTimer=setTimeout(connectLogs,3000)}
+ current.onerror=()=>{if(socket===current&&!disposed)logConnection.value='reconnecting'}
+}
 function downloadLogs(){const url=URL.createObjectURL(new Blob([logs.value.join('\n')],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='maa-log-'+new Date().toISOString().replace(/[:.]/g,'-')+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 onMounted(()=>{clock.value=new Date().toLocaleTimeString('zh-CN',{hour12:false});initialize();pollTimer=setInterval(poll,2000);sessionTimer=setInterval(()=>session().catch(e=>notify(e.message,'error')),20*60*1000);clockTimer=setInterval(()=>clock.value=new Date().toLocaleTimeString('zh-CN',{hour12:false}),1000)})
 onUnmounted(()=>{disposed=true;clearInterval(pollTimer);clearInterval(sessionTimer);clearInterval(clockTimer);clearTimeout(reconnectTimer);socket?.close()})

@@ -11,7 +11,9 @@ Android 手机网页远控。主容器整合 Web 控制台、USB ADB 和 Linux a
 <details>
 <summary>MAA 插件、手机远控与剪贴板</summary>
 
-![MAA：任务、参数、日志和定时入口](docs/screenshots/maa-desktop.png)
+![MAA：任务、参数、分级日志和定时入口](docs/screenshots/maa-desktop.png)
+
+<img src="docs/screenshots/maa-logs-mobile.png" width="300" alt="手机端 MAA 日志：搜索、复制、暂停跟随和收起的筛选工具" />
 
 <img src="docs/screenshots/mobile-remote.png" width="300" alt="手机端远控：文字全屏按钮与底部常用操作" />
 <img src="docs/screenshots/mobile-more.png" width="300" alt="手机端远控功能分组面板" />
@@ -39,7 +41,7 @@ USB 调试须在手机上授权。USB 目录整体映射以支持热插拔；若
 
 ## Compose
 
-[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.5**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
+[下载完整 stack](https://github.com/ChlorophyTeio/scrcpy-web-docker/releases/latest)；包括 `chlorophyimo/scrcpycat`、`chlorophyimo/scrcpycat-maa`、`chlorophyimo/scrcpycat-cache` 和可选 PostgreSQL 17。当前版本 **0.1.6**，发布镜像为 **linux/amd64**。stack 仅引用镜像，无需下载源码构建。
 
 源码仓库内启动（Docker Compose 2.20+）：
 
@@ -61,6 +63,8 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
 - UI 为 `/plugins/maa`，旧 `/maa-console` 自动跳转。
 - 浏览器每 10 秒刷新插件状态，停止 MAA 后隐藏入口，服务就绪后恢复。
 - 保留任务、定时、Windows 配置导入、关卡选择、识别记录、CPU 推理模式、核心更新/回退和独立资源热更新。
+- 任务、自动战斗和版本维护共用日志面板：显示时间、级别与任务，支持关键词/级别/任务筛选、警告错误计数、换行/原文、复制和导出。上滑阅读或选中文字时暂停跟随，新日志计数提示；重连按事件编号去重。手机端低频操作收进“筛选与工具”。
+- 浏览器仅保留当前页面最近 1500 条；服务端内存回放最近 300 条，容器重启后重新开始。导出范围为页面当前保留的日志；“清空视图”不停止任务或删除执行端日志。
 - worker 是独立实现的适配服务，不包含旧 `maa_docker` 网页后台。使用官方 maa-cli 0.7.7，首次启动下载核心和资源，需要 GitHub 连通性。
 - 插件自带的信用商店识别规则随镜像更新，旧文件自动备份，附加的自定义任务保留；不需要升级 MaaCore。
 - 配置、核心资源和缓存分别持久化。`MAA_DEVICE` 填远控中显示的设备标识；仅在新配置且恰好有一台已授权手机时尝试自动选择。

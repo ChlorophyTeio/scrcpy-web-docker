@@ -16,10 +16,10 @@ path.parent.mkdir(parents=True, exist_ok=True)
 database = secrets.token_hex(24)
 values = {
     'COMPOSE_PROFILES': 'database' if a.database == 'managed' else '',
-    'SCRCPYCAT_VERSION': '0.1.5',
-    'SCRCPYCAT_IMAGE': 'chlorophyimo/scrcpycat:0.1.5',
-    'SCRCPYCAT_MAA_IMAGE': 'chlorophyimo/scrcpycat-maa:0.1.5',
-    'SCRCPYCAT_CACHE_IMAGE': 'chlorophyimo/scrcpycat-cache:0.1.5',
+    'SCRCPYCAT_VERSION': '0.1.6',
+    'SCRCPYCAT_IMAGE': 'chlorophyimo/scrcpycat:0.1.6',
+    'SCRCPYCAT_MAA_IMAGE': 'chlorophyimo/scrcpycat-maa:0.1.6',
+    'SCRCPYCAT_CACHE_IMAGE': 'chlorophyimo/scrcpycat-cache:0.1.6',
     'SCRCPYCAT_NETWORK': 'scrcpycat',
     'SCRCPYCAT_EXTERNAL_NETWORK': 'false',
     'SCRCPYCAT_PUBLIC_URL': a.public_url,

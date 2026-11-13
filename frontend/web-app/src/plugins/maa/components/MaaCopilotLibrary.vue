@@ -10,16 +10,17 @@
    <MaaParameterFields v-if="kind==='copilot'" :fields="advancedFields.copilot" :model="parameters" :disabled="disabled||busy"/>
    <div class="maa-config-actions"><button @click="$emit('validate',[kind])" :disabled="disabled||!stored.present">检查配置</button><button @click="$emit('start',[kind])" class="primary" :disabled="disabled||busy||!stored.present">开始{{mode.label}}</button><button v-if="running" @click="$emit('stop')">停止任务</button></div>
    <p role="status" :class="{error}">{{notice}}</p>
-  </section><section class="maa-enhancement-card"><h3>运行日志</h3><pre class="maa-result-output">{{logs.join('\n')||'等待执行作业…'}}</pre></section></div>
+  </section><section class="maa-enhancement-card"><MaaLogPanel class="embedded-log-panel" :entries="logEntries" :connection="logConnection" @clear="$emit('clear-logs')"/></section></div>
  </div>
 </template>
 <script setup>
+import MaaLogPanel from '@/plugins/maa/components/MaaLogPanel.vue'
 import {ref,computed,watch} from 'vue'
 import MaaParameterFields from '@/plugins/maa/components/MaaParameterFields.vue'
 import {copilotTask} from '@/plugins/maa/utils/maaTasks'
 import {advancedFields} from '@/plugins/maa/utils/maaSettings'
-const props=defineProps({config:Object,disabled:Boolean,running:Boolean,logs:{type:Array,default:()=>[]}})
-defineEmits(['start','validate','stop'])
+const props=defineProps({config:Object,disabled:Boolean,running:Boolean,logEntries:{type:Array,default:()=>[]},logConnection:{type:String,default:'connecting'}})
+defineEmits(['start','validate','stop','clear-logs'])
 const modes=[{id:'copilot',label:'普通作战',hint:'请按作业要求设置编队；自动编队会修改当前游戏编队。'},{id:'ssscopilot',label:'保全派驻',hint:'导入 type 为 SSS 的分层作业，请先进入对应保全地图。'},{id:'paradoxcopilot',label:'悖论模拟',hint:'导入对应干员的悖论作业，请先确认模拟关卡已经解锁。'}]
 const kind=ref('copilot'),stored=ref({}),busy=ref(false),notice=ref(''),error=ref(false)
 const mode=computed(()=>modes.find(m=>m.id===kind.value)),parameters=computed(()=>props.config.params[kind.value]||(props.config.params[kind.value]=kind.value==='ssscopilot'?{loop_times:1}:{}))

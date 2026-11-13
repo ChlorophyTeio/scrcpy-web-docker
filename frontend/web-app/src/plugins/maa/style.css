@@ -20,3 +20,9 @@
 .maa-core-updates{border-bottom:1px solid #3c4b54;margin-bottom:24px;padding-bottom:24px}.maa-core-versions{margin:14px 0;font-size:12px}.maa-core-versions>div{display:flex;gap:14px;padding:6px 0}.maa-core-versions dt{color:#92a5af;min-width:90px}.maa-core-versions dd{margin:0;overflow-wrap:anywhere}.maa-core-updates>.maa-config-actions{gap:5px}.maa-core-updates>.maa-value-field{max-width:420px;margin:12px 0}.maa-core-updates input[type=time]{width:140px;color-scheme:dark}
 
 .maa-task-row.warning label,.maa-message-bar.warning,.maa-log-status.warning{color:#f0c578}.maa-task-row.warning{border-left-color:#d4a84d}
+
+/* Bounded independent log viewport; keep mobile log controls above its scroll area. */
+.maa-workspace>.maa-log-pane{align-self:start;position:sticky;top:0;min-height:320px;height:calc(100dvh - 200px);max-height:100%;gap:10px;overflow:hidden}
+.maa-log-status{flex:none}.embedded-log-panel{height:480px;min-height:300px;margin-top:14px;flex:none}
+@container maa-window (max-width:759px){.maa-workspace>.maa-log-pane{position:static;height:480px;max-height:none}}
+@container maa-window (max-width:640px){.maa-workspace[data-view=logs]{display:flex;flex-direction:column;overflow:hidden}.maa-workspace[data-view=logs]>.maa-log-pane{display:flex;position:static;align-self:stretch;flex:1;min-height:0;height:auto;max-height:none}.embedded-log-panel{height:560px;min-height:300px}.maa-workspace[data-view=logs]~.maa-message-bar{display:none}}
