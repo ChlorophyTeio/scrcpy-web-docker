@@ -73,6 +73,16 @@
     ],
     "reduceOtherTimes": [
       "WebMall-OperatorFinish*10"
+    ],
+    "ocrReplace": [
+      [
+        "^(?:\\+|＋|﹢|\\s)+",
+        ""
+      ],
+      [
+        "\\s+$",
+        ""
+      ]
     ]
   },
   "WebMall-OperatorSkip": {

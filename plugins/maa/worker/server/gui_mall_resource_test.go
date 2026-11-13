@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -78,5 +79,56 @@ func TestAwardRecognitionFailureDoesNotUseStaleTask(t *testing.T) {
 	}
 	if guiAwardLogReason(failed+"\nappend_task Award {} completed") != "" {
 		t.Fatal("stale award failure leaked")
+	}
+}
+
+func TestMallHireButtonNormalizesDecorationButKeepsExactMatching(t *testing.T) {
+	raw, err := os.ReadFile("../../resources/tasks/web-mall.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tasks map[string]struct {
+		FullMatch    bool       `json:"fullMatch"`
+		Text         []string   `json:"text"`
+		Replacements [][]string `json:"ocrReplace"`
+	}
+	if err := json.Unmarshal(raw, &tasks); err != nil {
+		t.Fatal(err)
+	}
+	rule := tasks["WebMall-HireOperator"]
+	if !rule.FullMatch {
+		t.Fatal("hire button must still require exact text")
+	}
+	cases := []struct {
+		text string
+		want bool
+	}{
+		{"聘用干员", true}, {"聘用员", true},
+		{"+聘用干员", true}, {"＋聘用干员", true}, {"﹢聘用干员", true},
+		{" + 聘用干员 ", true},
+		{"不可聘用干员", false}, {"未解锁聘用干员", false},
+		{"聘用干员活动", false}, {"购买物品", false},
+	}
+	for _, tc := range cases {
+		text := tc.text
+		for _, replacement := range rule.Replacements {
+			if len(replacement) != 2 {
+				t.Fatal("invalid OCR replacement")
+			}
+			re, err := regexp.Compile(replacement[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			text = re.ReplaceAllString(text, replacement[1])
+		}
+		matched := false
+		for _, target := range rule.Text {
+			if text == target {
+				matched = true
+			}
+		}
+		if matched != tc.want {
+			t.Errorf("OCR %q => %q: matched=%v", tc.text, text, matched)
+		}
 	}
 }
